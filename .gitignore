@@ -5,3 +5,4 @@ data/
 cookies/
 *.log
 config.toml
+test_data/
