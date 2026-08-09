@@ -250,7 +250,7 @@ class Downloader:
 
         try:
             jpg_path = await to_thread(_convert)
-            safe_unlink(webp_path)
+            webp_path.unlink(missing_ok=True)
             return jpg_path
         except Exception as e:
             logger.warning(f"webp 转 jpg 失败: {e}, 使用原始文件")
