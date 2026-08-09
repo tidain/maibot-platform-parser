@@ -81,6 +81,7 @@
     "send.text",
     "send.custom",
     "send.image",
+    "send.forward",
     "config.get"
   ],
   "i18n": {
