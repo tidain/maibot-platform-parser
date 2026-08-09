@@ -1,0 +1,89 @@
+{
+  "manifest_version": 2,
+  "id": "tidain.maibot-platform-parser",
+  "version": "1.2.0",
+  "name": "万能链接解析器",
+  "description": "自动解析抖音、小红书、B站等16个平台链接，并把图文/视频发送到QQ群。基于 Zhalslar/astrbot_plugin_parser 解析核心和 Color2333/maibot-multi-platform-parser 移植框架改进。",
+  "author": {
+    "name": "tidain",
+    "url": "https://github.com/tidain"
+  },
+  "license": "MIT",
+  "urls": {
+    "repository": "https://github.com/tidain/maibot-platform-parser"
+  },
+  "host_application": {
+    "min_version": "1.0.0",
+    "max_version": "1.99.99"
+  },
+  "sdk": {
+    "min_version": "2.0.0",
+    "max_version": "2.99.99"
+  },
+  "dependencies": [
+    {
+      "type": "python_package",
+      "name": "aiofiles",
+      "version_spec": ">=25.1.0"
+    },
+    {
+      "type": "python_package",
+      "name": "msgspec",
+      "version_spec": ">=0.21.0"
+    },
+    {
+      "type": "python_package",
+      "name": "yt-dlp",
+      "version_spec": ">=2026.3.17"
+    },
+    {
+      "type": "python_package",
+      "name": "bilibili-api-python",
+      "version_spec": ">=17.4.1"
+    },
+    {
+      "type": "python_package",
+      "name": "curl_cffi",
+      "version_spec": ">=0.7.0"
+    },
+    {
+      "type": "python_package",
+      "name": "tqdm",
+      "version_spec": ">=4.66.0"
+    },
+    {
+      "type": "python_package",
+      "name": "beautifulsoup4",
+      "version_spec": ">=4.12.0"
+    },
+    {
+      "type": "python_package",
+      "name": "apscheduler",
+      "version_spec": ">=3.10.0"
+    },
+    {
+      "type": "python_package",
+      "name": "apilmoji",
+      "version_spec": ">=0.1.0"
+    },
+    {
+      "type": "python_package",
+      "name": "gallery-dl",
+      "version_spec": ">=1.27.0"
+    },
+    {
+      "type": "python_package",
+      "name": "pillow",
+      "version_spec": ">=10.0.0"
+    }
+  ],
+  "capabilities": [
+    "send.text",
+    "send.custom",
+    "send.image",
+    "config.get"
+  ],
+  "i18n": {
+    "default_locale": "zh-CN"
+  }
+}

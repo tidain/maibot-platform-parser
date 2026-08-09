@@ -1,0 +1,66 @@
+[plugin]
+name = "multi_platform_parser"
+config_version = "1.2.0"
+version = "1.2.0"
+enabled = true
+admin_qqs = []
+
+[parser]
+enable_bilibili = true
+enable_douyin = true
+enable_xhs = true
+enable_xiaoheihe = true
+enable_acfun = true
+enable_instagram = true
+enable_iwara = false
+enable_kuaishou = true
+enable_ncm = true
+enable_nga = true
+enable_shipinhao = true
+enable_tiktok = true
+enable_twitter = true
+enable_weibo = true
+enable_youtube = true
+enable_zhihu = true
+
+group_whitelist = []
+block_ai_reply = true
+debounce_seconds = 120
+max_images = 9
+max_text_chars = 700
+send_images = true
+send_video = true
+use_forward_for_multi = true
+source_max_size_mb = 80        # 单个媒体最大下载大小（MB），范围：1-300
+source_max_minutes = 8         # 视频最大时长（分钟），范围：1-60
+
+[network]
+proxy = ""
+use_proxy_platforms = []
+common_timeout = 30
+download_timeout = 120
+download_retry_times = 1
+
+[cookies]
+bilibili = ""
+douyin = ""
+xhs = ""
+xiaoheihe = ""
+acfun = ""
+instagram = ""
+iwara = ""
+kuaishou = ""
+ncm = ""
+nga = ""
+shipinhao = ""
+tiktok = ""
+twitter = ""
+weibo = ""
+youtube = ""
+zhihu = ""
+
+[api]
+host = "127.0.0.1"
+port = 3000
+token = ""
+bot_uin = ""
