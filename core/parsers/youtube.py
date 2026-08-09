@@ -5,7 +5,8 @@ import msgspec
 from aiohttp import ClientError
 from msgspec import Struct
 
-from astrbot.api import logger
+import logging
+logger = logging.getLogger(__name__)
 
 from ..config import PluginConfig
 from ..cookie import CookieJar

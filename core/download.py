@@ -10,7 +10,8 @@ from aiohttp import ClientError, ClientSession, ClientTimeout
 from msgspec import Struct, convert
 from tqdm.asyncio import tqdm
 
-from astrbot.api import logger
+import logging
+logger = logging.getLogger(__name__)
 
 from .config import PluginConfig
 from .constants import COMMON_HEADER

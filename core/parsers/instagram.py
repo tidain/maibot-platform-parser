@@ -10,7 +10,8 @@ from urllib.parse import urlparse
 
 import yt_dlp
 
-from astrbot.api import logger
+import logging
+logger = logging.getLogger(__name__)
 
 from ..config import PluginConfig
 from ..cookie import CookieJar

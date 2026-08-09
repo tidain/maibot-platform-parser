@@ -4,7 +4,8 @@ import shutil
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from astrbot.api import logger
+import logging
+logger = logging.getLogger(__name__)
 
 from .config import PluginConfig
 

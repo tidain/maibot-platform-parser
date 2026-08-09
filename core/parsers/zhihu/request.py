@@ -7,7 +7,8 @@ from typing import Any, Callable
 from bs4 import BeautifulSoup
 from curl_cffi import requests as curl_requests
 
-from astrbot.api import logger
+import logging
+logger = logging.getLogger(__name__)
 
 from ...exception import ParseException
 from .common import RequestContext

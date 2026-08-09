@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any, TypeVar
 from urllib.parse import urlparse
 
-from astrbot.api import logger
+import logging
+logger = logging.getLogger(__name__)
 
 K = TypeVar("K")
 V = TypeVar("V")

@@ -8,7 +8,8 @@ from typing import ClassVar
 import aiofiles
 from aiohttp import ClientError
 
-from astrbot.api import logger
+import logging
+logger = logging.getLogger(__name__)
 
 from ..config import PluginConfig
 from ..cookie import CookieJar

@@ -4,7 +4,8 @@ from typing import Any, ClassVar
 
 from msgspec import Struct, convert, field
 
-from astrbot.api import logger
+import logging
+logger = logging.getLogger(__name__)
 
 from ..config import PluginConfig
 from ..cookie import CookieJar
