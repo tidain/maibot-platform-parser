@@ -70,7 +70,7 @@ class DouyinParser(BaseParser):
             try:
                 logger.debug(f"[抖音] 尝试解析: {url}")
                 return await self.parse_video(url)
-            except ParseException as e:
+            except Exception as e:
                 logger.warning(f"[抖音] 解析失败 {url}, 错误: {e}")
                 continue
         raise ParseException("分享已删除或资源直链提取失败, 请稍后再试")

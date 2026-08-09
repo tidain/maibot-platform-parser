@@ -227,7 +227,34 @@ class Downloader:
     ) -> Path:
         if img_name is None:
             img_name = generate_file_name(url, ".jpg")
-        return await self.streamd(url, file_name=img_name, headers=headers, proxy=proxy)
+        path = await self.streamd(url, file_name=img_name, headers=headers, proxy=proxy)
+        # webp 转 jpg，QQ OneBot 协议对 webp 支持不稳定
+        if path.suffix == ".webp":
+            path = await self._convert_webp_to_jpg(path)
+        return path
+
+    async def _convert_webp_to_jpg(self, webp_path: Path) -> Path:
+        """将 webp 图片转换为 jpg 格式"""
+        from io import BytesIO
+
+        from PIL import Image
+
+        def _convert():
+            img = Image.open(webp_path)
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            jpg_path = webp_path.with_suffix(".jpg")
+            img.save(jpg_path, "JPEG", quality=95)
+            img.close()
+            return jpg_path
+
+        try:
+            jpg_path = await to_thread(_convert)
+            safe_unlink(webp_path)
+            return jpg_path
+        except Exception as e:
+            logger.warning(f"webp 转 jpg 失败: {e}, 使用原始文件")
+            return webp_path
 
     async def download_imgs_without_raise(
         self,
