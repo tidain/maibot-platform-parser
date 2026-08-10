@@ -44,9 +44,7 @@
 
 - 🔗 **解密工具**：[点击跳转解密页面](https://nj-1307802825.cos-website.ap-nanjing.myqcloud.com/hunxiao//)
 
-[![解除混淆](https://img.shields.io/badge/解除混淆-点击跳转-blue)](https://nj-1307802825.cos-website.ap-nanjing.myqcloud.com/hunxiao//)
-
-> 将加密图片上传到解密工具即可还原为原始图片。建议仅在需要防盗场景下开启此功能。
+> 将加密图片上传到解密工具即可还原为原始图片。
 
 其他特性：
 - 图片优先使用群聊合并转发
