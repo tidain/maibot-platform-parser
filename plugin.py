@@ -299,7 +299,12 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
         if result.platform.name == "pixiv" and self.config.parser.pixiv_use_forward:
             use_forward = True
         if use_forward and len(nodes) > 1 and self._get_group_id(message):
+            self.ctx.logger.info("尝试合并转发: %d 个节点", len(nodes))
             sent_forward = await send_group_forward(message, nodes, self.config.api)
+            if not sent_forward:
+                self.ctx.logger.warning("合并转发失败，回退为逐条发送")
+        elif use_forward and len(nodes) > 1:
+            self.ctx.logger.info("合并转发条件不满足: group_id=%s", self._get_group_id(message))
 
         if not sent_forward:
             if header:
