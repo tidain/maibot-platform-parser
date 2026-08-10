@@ -38,7 +38,7 @@
 
 ### Pixiv 图片混淆功能
 
-开启 `pixiv_encrypt_image = true` 后，仅对 R18/R18G 作品的图片进行像素混淆加密处理，全年龄作品不受影响。用于防止图片被检测风控。
+开启后，仅对 R18/R18G 作品的图片进行像素混淆加密处理，全年龄作品不受影响。用于防止图片被检测风控。群聊默认开启，私聊默认关闭，可分别通过 `pixiv_encrypt_image_group` 和 `pixiv_encrypt_image_private` 配置。
 
 **注意**：混淆后的图片无法直接查看原始内容，需要使用解密工具还原：
 
@@ -110,7 +110,8 @@ source_max_minutes = 8      # 视频最大时长（分钟），范围：1-60
 
 ```toml
 [encrypt]
-pixiv_encrypt_image = false  # Pixiv图片混淆（仅R18/R18G作品，开启后图片像素混淆加密处理）
+pixiv_encrypt_image_group = true    # 群聊Pixiv图片混淆（仅R18/R18G作品，默认开启）
+pixiv_encrypt_image_private = false # 私聊Pixiv图片混淆（仅R18/R18G作品，默认关闭）
 ```
 
 ### 网络配置

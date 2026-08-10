@@ -70,7 +70,8 @@ class PluginConfig:
         pixiv_cookies: str = "",
         pixiv_nsfw: str = "blur",
         pixiv_max_page: int = 0,
-        pixiv_encrypt_image: bool = False,
+        pixiv_encrypt_image_group: bool = True,
+        pixiv_encrypt_image_private: bool = False,
         use_proxy_platforms: list[str] | None = None,
     ):
         self.whitelist: list[str] = []
@@ -209,7 +210,7 @@ class PluginConfig:
                     cookies=pixiv_cookies,
                     nsfw=pixiv_nsfw,
                     max_page=pixiv_max_page,
-                    encrypt_image=pixiv_encrypt_image,
+                    encrypt_image=False,  # 由 plugin.py 根据群聊/私聊动态设置
                 ),
             ]
         )

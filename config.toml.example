@@ -10,7 +10,7 @@ enable_bilibili = true
 enable_douyin = true
 enable_xhs = true
 enable_xiaoheihe = true
-enable_acfun = false         # 成人内容平台，默认关闭
+enable_acfun = false
 enable_instagram = true
 enable_iwara = false
 enable_kuaishou = true
@@ -36,7 +36,8 @@ source_max_size_mb = 80        # 单个媒体最大下载大小（MB），范围
 source_max_minutes = 8         # 视频最大时长（分钟），范围：1-60
 
 [encrypt]
-pixiv_encrypt_image = false   # Pixiv图片混淆（仅R18/R18G作品）
+pixiv_encrypt_image_group = true    # 群聊Pixiv图片混淆（仅R18/R18G作品，默认开启）
+pixiv_encrypt_image_private = false # 私聊Pixiv图片混淆（仅R18/R18G作品，默认关闭）
 
 [network]
 proxy = ""
