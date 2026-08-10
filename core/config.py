@@ -55,6 +55,7 @@ class PluginConfig:
         xiaoheihe_cookies: str = "",
         xiaoheihe_show_body_text: bool = True,
         acfun_cookies: str = "",
+        acfun_encrypt_image: bool = False,
         instagram_cookies: str = "",
         iwara_cookies: str = "",
         iwara_nsfw: str = "blur",
@@ -134,6 +135,7 @@ class PluginConfig:
                     enable="acfun" in enabled,
                     use_proxy="acfun" in proxy_platforms,
                     cookies=acfun_cookies,
+                    encrypt_image=acfun_encrypt_image,
                 ),
                 ParserItem(
                     "instagram",
