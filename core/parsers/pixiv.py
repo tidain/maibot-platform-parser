@@ -167,7 +167,7 @@ class PixivHelper:
 
     @staticmethod
     def format_tags(tags_data: dict[str, Any]) -> str:
-        """格式化标签：#原文(翻译) 或 #原文"""
+        """格式化标签：#原文(翻译) 或 #原文，限制最多显示5个"""
         tags = tags_data.get("tags", [])
         parts: list[str] = []
         for tag_info in tags:
@@ -183,6 +183,8 @@ class PixivHelper:
                 parts.append(f"#{tag}({translation})")
             else:
                 parts.append(f"#{tag}")
+        if len(parts) > 5:
+            return ", ".join(parts[:5]) + f" 等{len(parts)}个标签"
         return ", ".join(parts)
 
     @staticmethod
@@ -348,7 +350,7 @@ class PixivParser(BaseParser):
         """获取解密提示信息"""
         if not self.mycfg.encrypt_image:
             return ""
-        return f"图片已混淆加密，访问 {PIXIV_DECRYPT_URL} 上传图片即可解除混淆查看原图"
+        return f"图片已混淆，解密：{PIXIV_DECRYPT_URL}"
 
 
     async def _build_pdf(
