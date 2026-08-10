@@ -60,7 +60,7 @@ class ParserSectionConfig(PluginConfigBase):
     enable_youtube: bool = Field(default=True, description="启用YouTube解析", json_schema_extra={"label": "YouTube", "hint": "开启YouTube链接解析", "order": 14})
     enable_zhihu: bool = Field(default=True, description="启用知乎解析", json_schema_extra={"label": "知乎", "hint": "开启知乎链接解析", "order": 15})
     enable_pixiv: bool = Field(default=False, description="启用Pixiv解析（需配置Cookie，含R18内容）", json_schema_extra={"label": "Pixiv", "hint": "Pixiv解析需配置Cookie才能访问，含R18内容，默认关闭", "order": 16})
-    pixiv_encrypt_image: bool = Field(default=False, description="Pixiv图片是否混淆后发送", json_schema_extra={"label": "Pixiv图片混淆", "hint": "开启后，Pixiv图片会经过像素混淆加密处理后再发送", "order": 17})
+    pixiv_encrypt_image: bool = Field(default=False, description="Pixiv图片是否混淆后发送（仅R18/R18G作品）", json_schema_extra={"label": "Pixiv图片混淆", "hint": "开启后，仅对R18/R18G作品的图片进行像素混淆加密处理，全年龄作品不受影响", "order": 17})
 
     group_whitelist: list[str] = Field(default_factory=list, description="只在这些QQ群自动解析", json_schema_extra={"label": "群白名单", "hint": "空列表表示所有群都允许解析", "order": 18})
     block_ai_reply: bool = Field(default=True, description="命中链接后阻止麦麦继续触发普通聊天", json_schema_extra={"label": "阻止AI回复", "hint": "开启后命中链接时麦麦不会继续聊天", "order": 19})
