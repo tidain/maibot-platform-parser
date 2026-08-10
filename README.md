@@ -34,7 +34,19 @@
 - 微博（微博、视频）
 - YouTube（视频）
 - 知乎（回答、文章）
-- Pixiv（插画、漫画、小说、动图，含R18模糊处理）
+- Pixiv（插画、漫画、小说、动图，含R18模糊处理，支持图片混淆加密）
+
+### Pixiv 图片混淆功能
+
+开启 `pixiv_encrypt_image = true` 后，Pixiv 图片会经过像素混淆加密处理再发送，用于防止图片被第三方爬虫直接盗用。
+
+**注意**：混淆后的图片无法直接查看原始内容，需要使用解密工具还原：
+
+- 🔗 **解密工具**：[点击跳转解密页面](https://nj-1307802825.cos-website.ap-nanjing.myqcloud.com/hunxiao//)
+
+[![解除混淆](https://img.shields.io/badge/解除混淆-点击跳转-blue)](https://nj-1307802825.cos-website.ap-nanjing.myqcloud.com/hunxiao//)
+
+> 将加密图片上传到解密工具即可还原为原始图片。建议仅在需要防盗场景下开启此功能。
 
 其他特性：
 - 图片优先使用群聊合并转发

@@ -32,6 +32,7 @@ PIXIV_IMG_HEADERS: dict[str, str] = {
     "Referer": "https://www.pixiv.net/",
     "User-Agent": COMMON_HEADER["User-Agent"],
 }
+PIXIV_DECRYPT_URL = "https://nj-1307802825.cos-website.ap-nanjing.myqcloud.com/hunxiao//"
 
 
 class PixivAPI:
@@ -343,6 +344,12 @@ class PixivParser(BaseParser):
             encrypted_contents.append(ImageContent(encrypted_path))
         return encrypted_contents
 
+    def _get_decrypt_hint(self) -> str:
+        """获取解密提示信息"""
+        if not self.mycfg.encrypt_image:
+            return ""
+        return f"图片已混淆加密，访问 {PIXIV_DECRYPT_URL} 上传图片即可解除混淆查看原图"
+
 
     async def _build_pdf(
         self, img_paths_task: asyncio.Task[list[Path]], pid: str
@@ -549,6 +556,9 @@ class PixivParser(BaseParser):
         extra: dict[str, Any] = {}
         if character_count > 0:
             extra["info"] = f"字数: {character_count}"
+        decrypt_hint = self._get_decrypt_hint()
+        if decrypt_hint:
+            extra["info"] = f"{extra['info']}\n{decrypt_hint}" if extra.get("info") else decrypt_hint
 
         return self.result(
             author=author,
@@ -664,6 +674,9 @@ class PixivParser(BaseParser):
         if ugoira_meta is None and int(body.get("illustType", 0)) == 2:
             fallback_msg = "动图元数据获取失败，已回退为静态图片"
             extra["info"] = f"{extra['info']}\n{fallback_msg}" if extra.get("info") else fallback_msg
+        decrypt_hint = self._get_decrypt_hint()
+        if decrypt_hint:
+            extra["info"] = f"{extra['info']}\n{decrypt_hint}" if extra.get("info") else decrypt_hint
 
         return self.result(
             author=author,
@@ -707,6 +720,9 @@ class PixivParser(BaseParser):
                 extra["info"] = f"{extra_info}\n{max_page_msg}"
             else:
                 extra["info"] = max_page_msg
+            decrypt_hint = self._get_decrypt_hint()
+            if decrypt_hint:
+                extra["info"] = f"{extra['info']}\n{decrypt_hint}"
             return self.result(
                 author=author,
                 title=title,
@@ -764,6 +780,9 @@ class PixivParser(BaseParser):
         extra: dict[str, Any] = {}
         if extra_info:
             extra["info"] = extra_info
+        decrypt_hint = self._get_decrypt_hint()
+        if decrypt_hint:
+            extra["info"] = f"{extra['info']}\n{decrypt_hint}" if extra.get("info") else decrypt_hint
 
         return self.result(
             author=author,
