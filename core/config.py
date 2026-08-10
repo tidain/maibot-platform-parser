@@ -18,6 +18,7 @@ class ParserItem:
     nsfw: str = ""
     max_page: int = 0
     encrypt_image: bool = False
+    forward_image: bool = True
 
 
 class ParserConfig:
@@ -72,6 +73,7 @@ class PluginConfig:
         pixiv_max_page: int = 0,
         pixiv_encrypt_image_group: bool = True,
         pixiv_encrypt_image_private: bool = False,
+        pixiv_forward_image: bool = True,
         use_proxy_platforms: list[str] | None = None,
     ):
         self.whitelist: list[str] = []
@@ -211,6 +213,7 @@ class PluginConfig:
                     nsfw=pixiv_nsfw,
                     max_page=pixiv_max_page,
                     encrypt_image=False,  # 由 plugin.py 根据群聊/私聊动态设置
+                    forward_image=pixiv_forward_image,
                 ),
             ]
         )

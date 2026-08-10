@@ -595,44 +595,72 @@ class PixivParser(BaseParser):
         ]
 
         if blur:
-            # R18：封面已模糊，正文合成为 PDF
-            if illust_type == 2:
-                # 动图 → 提取帧 → PDF
-                pdf_task = asyncio.create_task(
-                    self._build_ugoira_pdf(pid, ugoira_meta)  # type: ignore[arg-type]
-                )
-            else:
-                # 静态插画 → 下载 → PDF
-                pages = await self.api.get_pages(pid)
-                img_urls = [p.get("urls", {}).get("original", "") for p in pages]
-                img_urls = [u for u in img_urls if u]
-                if not img_urls:
-                    raise ParseException("未找到插画图片")
-                img_paths_task = asyncio.create_task(
-                    self.downloader.download_imgs_without_raise(
-                        img_urls, headers=PIXIV_IMG_HEADERS, proxy=self.proxy
+            if self.mycfg.forward_image:
+                # R18：通过合并转发发送图片
+                content_contents: list[MediaContent] = []
+                if illust_type == 2:
+                    # 动图 → GIF
+                    gif_path = await self._build_gif(pid, ugoira_meta)  # type: ignore[arg-type]
+                    content_contents.append(ImageContent(gif_path))
+                else:
+                    # 静态插画
+                    pages = await self.api.get_pages(pid)
+                    img_urls = [p.get("urls", {}).get("original", "") for p in pages]
+                    img_urls = [u for u in img_urls if u]
+                    if not img_urls:
+                        raise ParseException("未找到插画图片")
+                    img_contents = self.create_image_contents(
+                        img_urls, headers=PIXIV_IMG_HEADERS
+                    )
+                    if self.mycfg.encrypt_image and is_r18:
+                        img_contents = await self._encrypt_image_contents(img_contents, True)
+                    content_contents.extend(img_contents)
+                send_groups.append(
+                    SendGroup(
+                        contents=content_contents,
+                        render_card=False,
+                        force_merge=False,
                     )
                 )
-                # 如果开启了图片混淆，在构建 PDF 前对图片进行加密
-                if self.mycfg.encrypt_image and is_r18:
-                    paths = await img_paths_task
-                    encrypted_paths = []
-                    for p in paths:
-                        encrypted_p = await asyncio.to_thread(self._maybe_encrypt_image, p, True)
-                        encrypted_paths.append(encrypted_p)
-                    async def _return_paths():
-                        return encrypted_paths
-                    img_paths_task = asyncio.create_task(_return_paths())
-                pdf_task = asyncio.create_task(
-                    self._build_pdf(img_paths_task, pid)
+            else:
+                # R18：封面已模糊，正文合成为 PDF
+                if illust_type == 2:
+                    # 动图 → 提取帧 → PDF
+                    pdf_task = asyncio.create_task(
+                        self._build_ugoira_pdf(pid, ugoira_meta)  # type: ignore[arg-type]
+                    )
+                else:
+                    # 静态插画 → 下载 → PDF
+                    pages = await self.api.get_pages(pid)
+                    img_urls = [p.get("urls", {}).get("original", "") for p in pages]
+                    img_urls = [u for u in img_urls if u]
+                    if not img_urls:
+                        raise ParseException("未找到插画图片")
+                    img_paths_task = asyncio.create_task(
+                        self.downloader.download_imgs_without_raise(
+                            img_urls, headers=PIXIV_IMG_HEADERS, proxy=self.proxy
+                        )
+                    )
+                    # 如果开启了图片混淆，在构建 PDF 前对图片进行加密
+                    if self.mycfg.encrypt_image and is_r18:
+                        paths = await img_paths_task
+                        encrypted_paths = []
+                        for p in paths:
+                            encrypted_p = await asyncio.to_thread(self._maybe_encrypt_image, p, True)
+                            encrypted_paths.append(encrypted_p)
+                        async def _return_paths():
+                            return encrypted_paths
+                        img_paths_task = asyncio.create_task(_return_paths())
+                    pdf_task = asyncio.create_task(
+                        self._build_pdf(img_paths_task, pid)
+                    )
+                send_groups.append(
+                    SendGroup(
+                        contents=[FileContent(pdf_task, name=f"pixiv_{pid}.pdf")],
+                        render_card=False,
+                        force_merge=False,
+                    )
                 )
-            send_groups.append(
-                SendGroup(
-                    contents=[FileContent(pdf_task, name=f"pixiv_{pid}.pdf")],
-                    render_card=False,
-                    force_merge=False,
-                )
-            )
         else:
             # 非 R18：正常发送图片
             content_contents: list[MediaContent] = []
@@ -733,42 +761,60 @@ class PixivParser(BaseParser):
         # 封面
         cover_contents = await self._download_cover(cover_url, blur, is_r18)
 
-        # 下载漫画页并构建 PDF
+        # 下载漫画页
         pages = await self.api.get_pages(pid)
         img_urls = [p.get("urls", {}).get("original", "") for p in pages]
         img_urls = [u for u in img_urls if u]
         if not img_urls:
             raise ParseException("未找到漫画图片")
 
-        img_paths_task = asyncio.create_task(
-            self.downloader.download_imgs_without_raise(
-                img_urls, headers=PIXIV_IMG_HEADERS, proxy=self.proxy
+        if self.mycfg.forward_image:
+            # 通过合并转发发送图片
+            img_contents = self.create_image_contents(
+                img_urls, headers=PIXIV_IMG_HEADERS
             )
-        )
+            if self.mycfg.encrypt_image and is_r18:
+                img_contents = await self._encrypt_image_contents(img_contents, True)
+            manga_contents: list[MediaContent] = img_contents
+            send_groups: list[SendGroup] = [
+                SendGroup(contents=[], render_card=True, force_merge=False),
+                SendGroup(
+                    contents=manga_contents,
+                    render_card=False,
+                    force_merge=False,
+                ),
+            ]
+        else:
+            # 合成为 PDF 发送
+            img_paths_task = asyncio.create_task(
+                self.downloader.download_imgs_without_raise(
+                    img_urls, headers=PIXIV_IMG_HEADERS, proxy=self.proxy
+                )
+            )
 
-        # 如果开启了图片混淆，在构建 PDF 前对图片进行加密
-        if self.mycfg.encrypt_image and is_r18:
-            paths = await img_paths_task
-            encrypted_paths = []
-            for p in paths:
-                encrypted_p = await asyncio.to_thread(self._maybe_encrypt_image, p, True)
-                encrypted_paths.append(encrypted_p)
-            img_paths_task = asyncio.create_task(asyncio.sleep(0))
-            # 重新创建 task 返回加密后的路径
-            async def _return_paths():
-                return encrypted_paths
-            img_paths_task = asyncio.create_task(_return_paths())
+            # 如果开启了图片混淆，在构建 PDF 前对图片进行加密
+            if self.mycfg.encrypt_image and is_r18:
+                paths = await img_paths_task
+                encrypted_paths = []
+                for p in paths:
+                    encrypted_p = await asyncio.to_thread(self._maybe_encrypt_image, p, True)
+                    encrypted_paths.append(encrypted_p)
+                img_paths_task = asyncio.create_task(asyncio.sleep(0))
+                # 重新创建 task 返回加密后的路径
+                async def _return_paths():
+                    return encrypted_paths
+                img_paths_task = asyncio.create_task(_return_paths())
 
-        pdf_task = asyncio.create_task(self._build_pdf(img_paths_task, pid))
+            pdf_task = asyncio.create_task(self._build_pdf(img_paths_task, pid))
 
-        send_groups: list[SendGroup] = [
-            SendGroup(contents=[], render_card=True, force_merge=False),
-            SendGroup(
-                contents=[FileContent(pdf_task, name=f"pixiv_{pid}.pdf")],
-                render_card=False,
-                force_merge=False,
-            ),
-        ]
+            send_groups = [
+                SendGroup(contents=[], render_card=True, force_merge=False),
+                SendGroup(
+                    contents=[FileContent(pdf_task, name=f"pixiv_{pid}.pdf")],
+                    render_card=False,
+                    force_merge=False,
+                ),
+            ]
 
         extra: dict[str, Any] = {}
         if extra_info:

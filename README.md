@@ -107,6 +107,7 @@ max_text_chars = 700        # 摘要正文最大字符数
 send_images = true          # 是否发送图片
 send_video = true           # 是否发送视频
 use_forward_for_multi = true  # 群聊多图/图文是否使用合并转发
+pixiv_forward_image = true  # Pixiv R18图片通过合并转发发送（关闭则合成为PDF）
 source_max_size_mb = 80     # 单个媒体最大下载大小（MB），范围：1-300
 source_max_minutes = 8      # 视频最大时长（分钟），范围：1-60
 ```
