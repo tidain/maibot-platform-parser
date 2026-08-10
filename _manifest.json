@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "id": "tidain.maibot-platform-parser",
-  "version": "1.6.2",
+  "version": "1.6.5",
   "name": "万能链接解析器",
   "description": "自动解析抖音、小红书、B站等17个平台链接，并把图文/视频发送到QQ群。基于 Zhalslar/astrbot_plugin_parser 解析核心和 Color2333/maibot-multi-platform-parser 移植框架改进。",
   "author": {
