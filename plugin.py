@@ -47,7 +47,7 @@ class ParserSectionConfig(PluginConfigBase):
     enable_douyin: bool = Field(default=True, description="启用抖音解析", json_schema_extra={"label": "抖音", "hint": "开启抖音链接解析", "order": 1})
     enable_xhs: bool = Field(default=True, description="启用小红书解析", json_schema_extra={"label": "小红书", "hint": "开启小红书链接解析", "order": 2})
     enable_xiaoheihe: bool = Field(default=True, description="启用小黑盒解析", json_schema_extra={"label": "小黑盒", "hint": "开启小黑盒链接解析", "order": 3})
-    enable_acfun: bool = Field(default=True, description="启用A站解析", json_schema_extra={"label": "A站", "hint": "开启A站链接解析", "order": 4})
+    enable_acfun: bool = Field(default=False, description="启用A站解析（成人内容平台，请谨慎开启）", json_schema_extra={"label": "A站", "hint": "成人内容平台，默认关闭，请谨慎开启", "order": 4})
     enable_instagram: bool = Field(default=True, description="启用Instagram解析", json_schema_extra={"label": "Instagram", "hint": "开启Instagram链接解析", "order": 5})
     enable_iwara: bool = Field(default=False, description="启用iwara解析（成人内容平台，请谨慎开启）", json_schema_extra={"label": "iwara", "hint": "成人内容平台，默认关闭，请谨慎开启", "order": 6})
     enable_kuaishou: bool = Field(default=True, description="启用快手解析", json_schema_extra={"label": "快手", "hint": "开启快手链接解析", "order": 7})
