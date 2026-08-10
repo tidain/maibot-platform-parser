@@ -60,17 +60,18 @@ class ParserSectionConfig(PluginConfigBase):
     enable_youtube: bool = Field(default=True, description="启用YouTube解析", json_schema_extra={"label": "YouTube", "hint": "开启YouTube链接解析", "order": 14})
     enable_zhihu: bool = Field(default=True, description="启用知乎解析", json_schema_extra={"label": "知乎", "hint": "开启知乎链接解析", "order": 15})
     enable_pixiv: bool = Field(default=False, description="启用Pixiv解析（需配置Cookie，含R18内容）", json_schema_extra={"label": "Pixiv", "hint": "Pixiv解析需配置Cookie才能访问，含R18内容，默认关闭", "order": 16})
+    pixiv_encrypt_image: bool = Field(default=False, description="Pixiv图片是否混淆后发送", json_schema_extra={"label": "Pixiv图片混淆", "hint": "开启后，Pixiv图片会经过像素混淆加密处理后再发送", "order": 17})
 
-    group_whitelist: list[str] = Field(default_factory=list, description="只在这些QQ群自动解析", json_schema_extra={"label": "群白名单", "hint": "空列表表示所有群都允许解析", "order": 17})
-    block_ai_reply: bool = Field(default=True, description="命中链接后阻止麦麦继续触发普通聊天", json_schema_extra={"label": "阻止AI回复", "hint": "开启后命中链接时麦麦不会继续聊天", "order": 18})
-    debounce_seconds: int = Field(default=120, description="同一会话同一链接去重时间（秒）", ge=0, json_schema_extra={"label": "去重时间(秒)", "hint": "同一会话同一链接在此时间内不会重复解析", "order": 19})
-    max_images: int = Field(default=9, description="单条链接最多发送图片数", ge=1, le=30, json_schema_extra={"label": "最大图片数", "hint": "单条链接最多发送多少张图片", "order": 20})
-    max_text_chars: int = Field(default=700, description="摘要正文最大字符数", ge=80, le=3000, json_schema_extra={"label": "最大文字长度", "hint": "摘要正文的最大字符数", "order": 21})
-    send_images: bool = Field(default=True, description="是否发送图片", json_schema_extra={"label": "发送图片", "hint": "是否发送解析到的图片", "order": 22})
-    send_video: bool = Field(default=True, description="是否发送视频", json_schema_extra={"label": "发送视频", "hint": "是否发送解析到的视频", "order": 23})
-    use_forward_for_multi: bool = Field(default=True, description="群聊多图/图文是否使用合并转发", json_schema_extra={"label": "合并转发", "hint": "群聊中多图或图文混排时使用合并转发", "order": 24})
-    source_max_size_mb: int = Field(default=80, description="单个媒体最大下载大小（MB），范围1-300", ge=1, le=300, json_schema_extra={"label": "最大文件大小(MB)", "hint": "单个媒体文件的最大下载大小，范围：1-300MB", "order": 25})
-    source_max_minutes: int = Field(default=8, description="视频最大时长（分钟），范围1-60", ge=1, le=60, json_schema_extra={"label": "最大视频时长(分钟)", "hint": "视频的最大时长限制，范围：1-60分钟", "order": 26})
+    group_whitelist: list[str] = Field(default_factory=list, description="只在这些QQ群自动解析", json_schema_extra={"label": "群白名单", "hint": "空列表表示所有群都允许解析", "order": 18})
+    block_ai_reply: bool = Field(default=True, description="命中链接后阻止麦麦继续触发普通聊天", json_schema_extra={"label": "阻止AI回复", "hint": "开启后命中链接时麦麦不会继续聊天", "order": 19})
+    debounce_seconds: int = Field(default=120, description="同一会话同一链接去重时间（秒）", ge=0, json_schema_extra={"label": "去重时间(秒)", "hint": "同一会话同一链接在此时间内不会重复解析", "order": 20})
+    max_images: int = Field(default=9, description="单条链接最多发送图片数", ge=1, le=30, json_schema_extra={"label": "最大图片数", "hint": "单条链接最多发送多少张图片", "order": 21})
+    max_text_chars: int = Field(default=700, description="摘要正文最大字符数", ge=80, le=3000, json_schema_extra={"label": "最大文字长度", "hint": "摘要正文的最大字符数", "order": 22})
+    send_images: bool = Field(default=True, description="是否发送图片", json_schema_extra={"label": "发送图片", "hint": "是否发送解析到的图片", "order": 23})
+    send_video: bool = Field(default=True, description="是否发送视频", json_schema_extra={"label": "发送视频", "hint": "是否发送解析到的视频", "order": 24})
+    use_forward_for_multi: bool = Field(default=True, description="群聊多图/图文是否使用合并转发", json_schema_extra={"label": "合并转发", "hint": "群聊中多图或图文混排时使用合并转发", "order": 25})
+    source_max_size_mb: int = Field(default=80, description="单个媒体最大下载大小（MB），范围1-300", ge=1, le=300, json_schema_extra={"label": "最大文件大小(MB)", "hint": "单个媒体文件的最大下载大小，范围：1-300MB", "order": 26})
+    source_max_minutes: int = Field(default=8, description="视频最大时长（分钟），范围1-60", ge=1, le=60, json_schema_extra={"label": "最大视频时长(分钟)", "hint": "视频的最大时长限制，范围：1-60分钟", "order": 27})
 
 
 class NetworkSectionConfig(PluginConfigBase):
@@ -398,6 +399,7 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             youtube_cookies=self.config.cookies.youtube,
             zhihu_cookies=self.config.cookies.zhihu,
             pixiv_cookies=self.config.cookies.pixiv,
+            pixiv_encrypt_image=self.config.parser.pixiv_encrypt_image,
             use_proxy_platforms=use_proxy_platforms,
         )
 

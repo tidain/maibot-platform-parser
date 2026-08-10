@@ -17,6 +17,7 @@ class ParserItem:
     video_quality: str = "_720P"
     nsfw: str = ""
     max_page: int = 0
+    encrypt_image: bool = False
 
 
 class ParserConfig:
@@ -69,6 +70,7 @@ class PluginConfig:
         pixiv_cookies: str = "",
         pixiv_nsfw: str = "blur",
         pixiv_max_page: int = 0,
+        pixiv_encrypt_image: bool = False,
         use_proxy_platforms: list[str] | None = None,
     ):
         self.whitelist: list[str] = []
@@ -207,6 +209,7 @@ class PluginConfig:
                     cookies=pixiv_cookies,
                     nsfw=pixiv_nsfw,
                     max_page=pixiv_max_page,
+                    encrypt_image=pixiv_encrypt_image,
                 ),
             ]
         )

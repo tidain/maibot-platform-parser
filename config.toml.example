@@ -23,6 +23,7 @@ enable_weibo = true
 enable_youtube = true
 enable_zhihu = true
 enable_pixiv = false
+pixiv_encrypt_image = false
 
 group_whitelist = []
 block_ai_reply = true

@@ -24,6 +24,7 @@ from ..data import (
 )
 from ..download import Downloader
 from ..exception import ParseException
+from ..tomato import encrypt_image
 from .base import BaseParser, handle
 
 PIXIV_BASE = "https://www.pixiv.net"
@@ -313,6 +314,35 @@ class PixivParser(BaseParser):
         await self.api.close()
         await super().close_session()
 
+    def _maybe_encrypt_image(self, img_path: Path) -> Path:
+        """如果开启了图片混淆，则对图片进行加密处理"""
+        if not self.mycfg.encrypt_image:
+            return img_path
+        try:
+            from PIL import Image as PILImage
+            pil_img = PILImage.open(img_path)
+            encrypted_img = encrypt_image(pil_img)
+            encrypted_path = img_path.parent / f"{img_path.stem}_encrypted.jpg"
+            encrypted_img.save(encrypted_path, "JPEG", quality=95)
+            pil_img.close()
+            encrypted_img.close()
+            return encrypted_path
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"图片加密失败: {e}")
+            return img_path
+
+    async def _encrypt_image_contents(
+        self, contents: list[ImageContent]
+    ) -> list[ImageContent]:
+        """对图片内容列表进行加密处理"""
+        encrypted_contents: list[ImageContent] = []
+        for content in contents:
+            path = await content.get_path()
+            encrypted_path = await asyncio.to_thread(self._maybe_encrypt_image, path)
+            encrypted_contents.append(ImageContent(encrypted_path))
+        return encrypted_contents
+
 
     async def _build_pdf(
         self, img_paths_task: asyncio.Task[list[Path]], pid: str
@@ -399,6 +429,7 @@ class PixivParser(BaseParser):
         )
         if blur:
             cover_path = PixivHelper.blur(cover_path, radius=5)
+        cover_path = self._maybe_encrypt_image(cover_path)
         return [ImageContent(cover_path)]
 
     async def _get_series_info(
@@ -579,6 +610,16 @@ class PixivParser(BaseParser):
                         img_urls, headers=PIXIV_IMG_HEADERS, proxy=self.proxy
                     )
                 )
+                # 如果开启了图片混淆，在构建 PDF 前对图片进行加密
+                if self.mycfg.encrypt_image:
+                    paths = await img_paths_task
+                    encrypted_paths = []
+                    for p in paths:
+                        encrypted_p = await asyncio.to_thread(self._maybe_encrypt_image, p)
+                        encrypted_paths.append(encrypted_p)
+                    async def _return_paths():
+                        return encrypted_paths
+                    img_paths_task = asyncio.create_task(_return_paths())
                 pdf_task = asyncio.create_task(
                     self._build_pdf(img_paths_task, pid)
                 )
@@ -603,11 +644,12 @@ class PixivParser(BaseParser):
                 img_urls = [u for u in img_urls if u]
                 if not img_urls:
                     raise ParseException("未找到插画图片")
-                content_contents.extend(
-                    self.create_image_contents(
-                        img_urls, headers=PIXIV_IMG_HEADERS
-                    )
+                img_contents = self.create_image_contents(
+                    img_urls, headers=PIXIV_IMG_HEADERS
                 )
+                if self.mycfg.encrypt_image:
+                    img_contents = await self._encrypt_image_contents(img_contents)
+                content_contents.extend(img_contents)
             send_groups.append(
                 SendGroup(
                     contents=content_contents,
@@ -694,6 +736,20 @@ class PixivParser(BaseParser):
                 img_urls, headers=PIXIV_IMG_HEADERS, proxy=self.proxy
             )
         )
+        
+        # 如果开启了图片混淆，在构建 PDF 前对图片进行加密
+        if self.mycfg.encrypt_image:
+            paths = await img_paths_task
+            encrypted_paths = []
+            for p in paths:
+                encrypted_p = await asyncio.to_thread(self._maybe_encrypt_image, p)
+                encrypted_paths.append(encrypted_p)
+            img_paths_task = asyncio.create_task(asyncio.sleep(0))
+            # 重新创建 task 返回加密后的路径
+            async def _return_paths():
+                return encrypted_paths
+            img_paths_task = asyncio.create_task(_return_paths())
+
         pdf_task = asyncio.create_task(self._build_pdf(img_paths_task, pid))
 
         send_groups: list[SendGroup] = [

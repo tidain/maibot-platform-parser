@@ -84,6 +84,7 @@ enable_weibo = true         # 启用微博解析
 enable_youtube = true       # 启用YouTube解析
 enable_zhihu = true         # 启用知乎解析
 enable_pixiv = false        # 启用Pixiv解析（需配置Cookie，含R18内容，默认关闭）
+pixiv_encrypt_image = false  # Pixiv图片混淆（开启后图片像素混淆加密处理）
 group_whitelist = []        # 允许自动解析的群号，空列表表示所有群
 block_ai_reply = true       # 命中链接后是否阻止麦麦继续普通聊天
 debounce_seconds = 120      # 同一会话同一链接去重时间（秒）
