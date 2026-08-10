@@ -100,8 +100,24 @@ source_max_minutes = 8      # 视频最大时长（分钟），范围：1-60
 
 ```toml
 [network]
-proxy = ""                  # 解析/下载代理，例如 http://127.0.0.1:7890
-use_proxy_platforms = []    # 需要走代理的平台名
+proxy = ""                  # 解析/下载代理，例如 http://127.0.0.1:7890，留空则不使用
+proxy_bilibili = false      # B站使用代理
+proxy_douyin = false        # 抖音使用代理
+proxy_xhs = false           # 小红书使用代理
+proxy_xiaoheihe = false     # 小黑盒使用代理
+proxy_acfun = false         # A站使用代理
+proxy_instagram = true      # Instagram使用代理（默认开启）
+proxy_iwara = true          # iwara使用代理（默认开启）
+proxy_kuaishou = false      # 快手使用代理
+proxy_ncm = false           # 网易云音乐使用代理
+proxy_nga = false           # NGA使用代理
+proxy_shipinhao = false     # 微信视频号使用代理
+proxy_tiktok = true         # TikTok使用代理（默认开启）
+proxy_twitter = true        # Twitter/X使用代理（默认开启）
+proxy_weibo = false         # 微博使用代理
+proxy_youtube = true        # YouTube使用代理（默认开启）
+proxy_zhihu = false         # 知乎使用代理
+proxy_pixiv = true          # Pixiv使用代理（默认开启）
 common_timeout = 30         # 普通请求超时秒数
 download_timeout = 120      # 下载超时秒数
 download_retry_times = 1    # 下载重试次数

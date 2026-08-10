@@ -37,7 +37,23 @@ source_max_minutes = 8         # 视频最大时长（分钟），范围：1-60
 
 [network]
 proxy = ""
-use_proxy_platforms = []
+proxy_bilibili = false
+proxy_douyin = false
+proxy_xhs = false
+proxy_xiaoheihe = false
+proxy_acfun = false
+proxy_instagram = true
+proxy_iwara = true
+proxy_kuaishou = false
+proxy_ncm = false
+proxy_nga = false
+proxy_shipinhao = false
+proxy_tiktok = true
+proxy_twitter = true
+proxy_weibo = false
+proxy_youtube = true
+proxy_zhihu = false
+proxy_pixiv = true
 common_timeout = 30
 download_timeout = 120
 download_retry_times = 1

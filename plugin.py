@@ -78,10 +78,26 @@ class NetworkSectionConfig(PluginConfigBase):
     __ui_order__ = 2
 
     proxy: str = Field(default="", description="解析/下载代理", json_schema_extra={"label": "代理地址", "hint": "例如 http://127.0.0.1:7890，留空则不使用代理", "order": 0})
-    use_proxy_platforms: list[str] = Field(default=[], description="需要走代理的平台名", json_schema_extra={"label": "代理平台", "hint": "指定哪些平台需要使用代理，如 youtube、twitter", "order": 1})
-    common_timeout: int = Field(default=30, description="普通请求超时秒数", ge=5, le=120, json_schema_extra={"label": "请求超时(秒)", "hint": "普通请求的超时时间", "order": 2})
-    download_timeout: int = Field(default=120, description="下载超时秒数", ge=10, le=600, json_schema_extra={"label": "下载超时(秒)", "hint": "文件下载的超时时间", "order": 3})
-    download_retry_times: int = Field(default=1, description="下载重试次数", ge=0, le=5, json_schema_extra={"label": "下载重试次数", "hint": "下载失败时的重试次数", "order": 4})
+    proxy_bilibili: bool = Field(default=False, description="B站使用代理", json_schema_extra={"label": "B站代理", "hint": "B站请求是否走代理", "order": 1})
+    proxy_douyin: bool = Field(default=False, description="抖音使用代理", json_schema_extra={"label": "抖音代理", "hint": "抖音请求是否走代理", "order": 2})
+    proxy_xhs: bool = Field(default=False, description="小红书使用代理", json_schema_extra={"label": "小红书代理", "hint": "小红书请求是否走代理", "order": 3})
+    proxy_xiaoheihe: bool = Field(default=False, description="小黑盒使用代理", json_schema_extra={"label": "小黑盒代理", "hint": "小黑盒请求是否走代理", "order": 4})
+    proxy_acfun: bool = Field(default=False, description="A站使用代理", json_schema_extra={"label": "A站代理", "hint": "A站请求是否走代理", "order": 5})
+    proxy_instagram: bool = Field(default=True, description="Instagram使用代理", json_schema_extra={"label": "Instagram代理", "hint": "Instagram请求是否走代理，默认开启", "order": 6})
+    proxy_iwara: bool = Field(default=True, description="iwara使用代理", json_schema_extra={"label": "iwara代理", "hint": "iwara请求是否走代理，默认开启", "order": 7})
+    proxy_kuaishou: bool = Field(default=False, description="快手使用代理", json_schema_extra={"label": "快手代理", "hint": "快手请求是否走代理", "order": 8})
+    proxy_ncm: bool = Field(default=False, description="网易云音乐使用代理", json_schema_extra={"label": "网易云音乐代理", "hint": "网易云音乐请求是否走代理", "order": 9})
+    proxy_nga: bool = Field(default=False, description="NGA使用代理", json_schema_extra={"label": "NGA代理", "hint": "NGA请求是否走代理", "order": 10})
+    proxy_shipinhao: bool = Field(default=False, description="微信视频号使用代理", json_schema_extra={"label": "微信视频号代理", "hint": "微信视频号请求是否走代理", "order": 11})
+    proxy_tiktok: bool = Field(default=True, description="TikTok使用代理", json_schema_extra={"label": "TikTok代理", "hint": "TikTok请求是否走代理，默认开启", "order": 12})
+    proxy_twitter: bool = Field(default=True, description="Twitter/X使用代理", json_schema_extra={"label": "Twitter/X代理", "hint": "Twitter/X请求是否走代理，默认开启", "order": 13})
+    proxy_weibo: bool = Field(default=False, description="微博使用代理", json_schema_extra={"label": "微博代理", "hint": "微博请求是否走代理", "order": 14})
+    proxy_youtube: bool = Field(default=True, description="YouTube使用代理", json_schema_extra={"label": "YouTube代理", "hint": "YouTube请求是否走代理，默认开启", "order": 15})
+    proxy_zhihu: bool = Field(default=False, description="知乎使用代理", json_schema_extra={"label": "知乎代理", "hint": "知乎请求是否走代理", "order": 16})
+    proxy_pixiv: bool = Field(default=True, description="Pixiv使用代理", json_schema_extra={"label": "Pixiv代理", "hint": "Pixiv请求是否走代理，默认开启", "order": 17})
+    common_timeout: int = Field(default=30, description="普通请求超时秒数", ge=5, le=120, json_schema_extra={"label": "请求超时(秒)", "hint": "普通请求的超时时间", "order": 18})
+    download_timeout: int = Field(default=120, description="下载超时秒数", ge=10, le=600, json_schema_extra={"label": "下载超时(秒)", "hint": "文件下载的超时时间", "order": 19})
+    download_retry_times: int = Field(default=1, description="下载重试次数", ge=0, le=5, json_schema_extra={"label": "下载重试次数", "hint": "下载失败时的重试次数", "order": 20})
 
 
 class CookieSectionConfig(PluginConfigBase):
@@ -320,6 +336,41 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             enabled_platforms.append("zhihu")
         if self.config.parser.enable_pixiv:
             enabled_platforms.append("pixiv")
+        use_proxy_platforms = []
+        if self.config.network.proxy_bilibili:
+            use_proxy_platforms.append("bilibili")
+        if self.config.network.proxy_douyin:
+            use_proxy_platforms.append("douyin")
+        if self.config.network.proxy_xhs:
+            use_proxy_platforms.append("xhs")
+        if self.config.network.proxy_xiaoheihe:
+            use_proxy_platforms.append("xiaoheihe")
+        if self.config.network.proxy_acfun:
+            use_proxy_platforms.append("acfun")
+        if self.config.network.proxy_instagram:
+            use_proxy_platforms.append("instagram")
+        if self.config.network.proxy_iwara:
+            use_proxy_platforms.append("iwara")
+        if self.config.network.proxy_kuaishou:
+            use_proxy_platforms.append("kuaishou")
+        if self.config.network.proxy_ncm:
+            use_proxy_platforms.append("ncm")
+        if self.config.network.proxy_nga:
+            use_proxy_platforms.append("nga")
+        if self.config.network.proxy_shipinhao:
+            use_proxy_platforms.append("shipinhao")
+        if self.config.network.proxy_tiktok:
+            use_proxy_platforms.append("tiktok")
+        if self.config.network.proxy_twitter:
+            use_proxy_platforms.append("twitter")
+        if self.config.network.proxy_weibo:
+            use_proxy_platforms.append("weibo")
+        if self.config.network.proxy_youtube:
+            use_proxy_platforms.append("youtube")
+        if self.config.network.proxy_zhihu:
+            use_proxy_platforms.append("zhihu")
+        if self.config.network.proxy_pixiv:
+            use_proxy_platforms.append("pixiv")
         return CorePluginConfig(
             data_dir=data_dir,
             enabled_platforms=enabled_platforms,
@@ -347,7 +398,7 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             youtube_cookies=self.config.cookies.youtube,
             zhihu_cookies=self.config.cookies.zhihu,
             pixiv_cookies=self.config.cookies.pixiv,
-            use_proxy_platforms=list(self.config.network.use_proxy_platforms),
+            use_proxy_platforms=use_proxy_platforms,
         )
 
     def _format_header(self, result: ParseResult) -> str:
