@@ -32,7 +32,6 @@ PIXIV_IMG_HEADERS: dict[str, str] = {
     "Referer": "https://www.pixiv.net/",
     "User-Agent": COMMON_HEADER["User-Agent"],
 }
-PIXIV_DECRYPT_URL = "https://nj-1307802825.cos-website.ap-nanjing.myqcloud.com/hunxiao//"
 
 
 class PixivAPI:
@@ -167,7 +166,7 @@ class PixivHelper:
 
     @staticmethod
     def format_tags(tags_data: dict[str, Any]) -> str:
-        """格式化标签：#原文(翻译) 或 #原文，限制最多显示5个"""
+        """格式化标签：#原文(翻译) 或 #原文"""
         tags = tags_data.get("tags", [])
         parts: list[str] = []
         for tag_info in tags:
@@ -183,8 +182,6 @@ class PixivHelper:
                 parts.append(f"#{tag}({translation})")
             else:
                 parts.append(f"#{tag}")
-        if len(parts) > 5:
-            return ", ".join(parts[:5]) + f" 等{len(parts)}个标签"
         return ", ".join(parts)
 
     @staticmethod
@@ -317,9 +314,9 @@ class PixivParser(BaseParser):
         await self.api.close()
         await super().close_session()
 
-    def _maybe_encrypt_image(self, img_path: Path) -> Path:
-        """如果开启了图片混淆，则对图片进行加密处理"""
-        if not self.mycfg.encrypt_image:
+    def _maybe_encrypt_image(self, img_path: Path, is_r18: bool = False) -> Path:
+        """如果开启了图片混淆且作品为R18/R18G，则对图片进行加密处理"""
+        if not (self.mycfg.encrypt_image and is_r18):
             return img_path
         try:
             from PIL import Image as PILImage
@@ -336,22 +333,15 @@ class PixivParser(BaseParser):
             return img_path
 
     async def _encrypt_image_contents(
-        self, contents: list[ImageContent]
+        self, contents: list[ImageContent], is_r18: bool = False
     ) -> list[ImageContent]:
         """对图片内容列表进行加密处理"""
         encrypted_contents: list[ImageContent] = []
         for content in contents:
             path = await content.get_path()
-            encrypted_path = await asyncio.to_thread(self._maybe_encrypt_image, path)
+            encrypted_path = await asyncio.to_thread(self._maybe_encrypt_image, path, is_r18)
             encrypted_contents.append(ImageContent(encrypted_path))
         return encrypted_contents
-
-    def _get_decrypt_hint(self) -> str:
-        """获取解密提示信息"""
-        if not self.mycfg.encrypt_image:
-            return ""
-        return f"图片已混淆，解密：{PIXIV_DECRYPT_URL}"
-
 
     async def _build_pdf(
         self, img_paths_task: asyncio.Task[list[Path]], pid: str
@@ -428,7 +418,7 @@ class PixivParser(BaseParser):
         )
 
     async def _download_cover(
-        self, cover_url: str, blur: bool
+        self, cover_url: str, blur: bool, is_r18: bool = False
     ) -> list[MediaContent]:
         """下载封面图，blur 时模糊处理"""
         if not cover_url:
@@ -438,7 +428,7 @@ class PixivParser(BaseParser):
         )
         if blur:
             cover_path = PixivHelper.blur(cover_path, radius=5)
-        cover_path = self._maybe_encrypt_image(cover_path)
+        cover_path = self._maybe_encrypt_image(cover_path, is_r18)
         return [ImageContent(cover_path)]
 
     async def _get_series_info(
@@ -532,8 +522,9 @@ class PixivParser(BaseParser):
         character_count = int(body.get("characterCount", 0))
 
         # 封面
+        is_r18 = x_restrict > 0
         cover_contents = await self._download_cover(
-            body.get("coverUrl", ""), blur
+            body.get("coverUrl", ""), blur, is_r18
         )
 
         # 小说正文：直接从 API 的 content 字段获取
@@ -558,9 +549,8 @@ class PixivParser(BaseParser):
         extra: dict[str, Any] = {}
         if character_count > 0:
             extra["info"] = f"字数: {character_count}"
-        decrypt_hint = self._get_decrypt_hint()
-        if decrypt_hint:
-            extra["info"] = f"{extra['info']}\n{decrypt_hint}" if extra.get("info") else decrypt_hint
+        if self.mycfg.encrypt_image and is_r18:
+            extra["encrypted"] = True
 
         return self.result(
             author=author,
@@ -590,7 +580,8 @@ class PixivParser(BaseParser):
         create_date = body.get("createDate", "")
 
         # 封面（R18 时模糊处理）
-        cover_contents = await self._download_cover(cover_url, blur)
+        is_r18 = x_restrict > 0
+        cover_contents = await self._download_cover(cover_url, blur, is_r18)
 
         # 动图：尝试获取 ugoira meta，失败时回退为普通插画
         ugoira_meta: dict[str, Any] | None = None
@@ -623,11 +614,11 @@ class PixivParser(BaseParser):
                     )
                 )
                 # 如果开启了图片混淆，在构建 PDF 前对图片进行加密
-                if self.mycfg.encrypt_image:
+                if self.mycfg.encrypt_image and is_r18:
                     paths = await img_paths_task
                     encrypted_paths = []
                     for p in paths:
-                        encrypted_p = await asyncio.to_thread(self._maybe_encrypt_image, p)
+                        encrypted_p = await asyncio.to_thread(self._maybe_encrypt_image, p, True)
                         encrypted_paths.append(encrypted_p)
                     async def _return_paths():
                         return encrypted_paths
@@ -659,8 +650,8 @@ class PixivParser(BaseParser):
                 img_contents = self.create_image_contents(
                     img_urls, headers=PIXIV_IMG_HEADERS
                 )
-                if self.mycfg.encrypt_image:
-                    img_contents = await self._encrypt_image_contents(img_contents)
+                if self.mycfg.encrypt_image and is_r18:
+                    img_contents = await self._encrypt_image_contents(img_contents, True)
                 content_contents.extend(img_contents)
             send_groups.append(
                 SendGroup(
@@ -676,9 +667,8 @@ class PixivParser(BaseParser):
         if ugoira_meta is None and int(body.get("illustType", 0)) == 2:
             fallback_msg = "动图元数据获取失败，已回退为静态图片"
             extra["info"] = f"{extra['info']}\n{fallback_msg}" if extra.get("info") else fallback_msg
-        decrypt_hint = self._get_decrypt_hint()
-        if decrypt_hint:
-            extra["info"] = f"{extra['info']}\n{decrypt_hint}" if extra.get("info") else decrypt_hint
+        if self.mycfg.encrypt_image and is_r18:
+            extra["encrypted"] = True
 
         return self.result(
             author=author,
@@ -710,10 +700,12 @@ class PixivParser(BaseParser):
         # 系列信息
         extra_info = await self._get_series_info(body, user_id)
 
+        is_r18 = x_restrict > 0
+
         # max_page 限制
         max_page = self.mycfg.max_page or 0
         if max_page > 0 and page_count > max_page:
-            cover_contents = await self._download_cover(cover_url, blur)
+            cover_contents = await self._download_cover(cover_url, blur, is_r18)
             max_page_msg = (
                 f"漫画共 {page_count} 页，超过最大页数 {max_page}，跳过下载。"
             )
@@ -722,9 +714,8 @@ class PixivParser(BaseParser):
                 extra["info"] = f"{extra_info}\n{max_page_msg}"
             else:
                 extra["info"] = max_page_msg
-            decrypt_hint = self._get_decrypt_hint()
-            if decrypt_hint:
-                extra["info"] = f"{extra['info']}\n{decrypt_hint}"
+            if self.mycfg.encrypt_image and is_r18:
+                extra["encrypted"] = True
             return self.result(
                 author=author,
                 title=title,
@@ -740,7 +731,7 @@ class PixivParser(BaseParser):
             )
 
         # 封面
-        cover_contents = await self._download_cover(cover_url, blur)
+        cover_contents = await self._download_cover(cover_url, blur, is_r18)
 
         # 下载漫画页并构建 PDF
         pages = await self.api.get_pages(pid)
@@ -754,13 +745,13 @@ class PixivParser(BaseParser):
                 img_urls, headers=PIXIV_IMG_HEADERS, proxy=self.proxy
             )
         )
-        
+
         # 如果开启了图片混淆，在构建 PDF 前对图片进行加密
-        if self.mycfg.encrypt_image:
+        if self.mycfg.encrypt_image and is_r18:
             paths = await img_paths_task
             encrypted_paths = []
             for p in paths:
-                encrypted_p = await asyncio.to_thread(self._maybe_encrypt_image, p)
+                encrypted_p = await asyncio.to_thread(self._maybe_encrypt_image, p, True)
                 encrypted_paths.append(encrypted_p)
             img_paths_task = asyncio.create_task(asyncio.sleep(0))
             # 重新创建 task 返回加密后的路径
@@ -782,9 +773,8 @@ class PixivParser(BaseParser):
         extra: dict[str, Any] = {}
         if extra_info:
             extra["info"] = extra_info
-        decrypt_hint = self._get_decrypt_hint()
-        if decrypt_hint:
-            extra["info"] = f"{extra['info']}\n{decrypt_hint}" if extra.get("info") else decrypt_hint
+        if self.mycfg.encrypt_image and is_r18:
+            extra["encrypted"] = True
 
         return self.result(
             author=author,
