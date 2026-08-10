@@ -294,7 +294,11 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
 
         nodes = text_nodes + image_nodes
         sent_forward = False
-        if self.config.parser.use_forward_for_multi and len(nodes) > 1 and self._get_group_id(message):
+        # 合并转发条件：通用合并转发开关开启，或Pixiv合并转发开关开启
+        use_forward = self.config.parser.use_forward_for_multi
+        if result.platform.name == "pixiv" and self.config.parser.pixiv_use_forward:
+            use_forward = True
+        if use_forward and len(nodes) > 1 and self._get_group_id(message):
             sent_forward = await send_group_forward(message, nodes, self.config.api)
 
         if not sent_forward:
