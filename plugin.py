@@ -69,7 +69,7 @@ class ParserSectionConfig(PluginConfigBase):
     send_images: bool = Field(default=True, description="是否发送图片", json_schema_extra={"label": "发送图片", "hint": "是否发送解析到的图片", "order": 23})
     send_video: bool = Field(default=True, description="是否发送视频", json_schema_extra={"label": "发送视频", "hint": "是否发送解析到的视频", "order": 24})
     use_forward_for_multi: bool = Field(default=True, description="群聊多图/图文是否使用合并转发", json_schema_extra={"label": "合并转发", "hint": "群聊中多图或图文混排时使用合并转发", "order": 25})
-    pixiv_forward_image: bool = Field(default=True, description="Pixiv R18图片是否使用合并转发发送（关闭则合成为PDF）", json_schema_extra={"label": "Pixiv图片转发", "hint": "开启后R18/R18G作品图片通过合并转发发送，关闭则合成为PDF文件发送", "order": 26})
+    pixiv_use_forward: bool = Field(default=True, description="Pixiv图片使用合并转发逐张发送（关闭则合成为PDF）", json_schema_extra={"label": "Pixiv合并转发", "hint": "开启后Pixiv图片通过合并转发逐张发送，关闭则合成为PDF文件", "order": 26})
     source_max_size_mb: int = Field(default=80, description="单个媒体最大下载大小（MB），范围1-300", ge=1, le=300, json_schema_extra={"label": "最大文件大小(MB)", "hint": "单个媒体文件的最大下载大小，范围：1-300MB", "order": 27})
     source_max_minutes: int = Field(default=8, description="视频最大时长（分钟），范围1-60", ge=1, le=60, json_schema_extra={"label": "最大视频时长(分钟)", "hint": "视频的最大时长限制，范围：1-60分钟", "order": 28})
 
@@ -423,7 +423,7 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             pixiv_cookies=self.config.cookies.pixiv,
             pixiv_encrypt_image_group=self.config.encrypt.pixiv_encrypt_image_group,
             pixiv_encrypt_image_private=self.config.encrypt.pixiv_encrypt_image_private,
-            pixiv_forward_image=self.config.parser.pixiv_forward_image,
+            pixiv_use_forward=self.config.parser.pixiv_use_forward,
             use_proxy_platforms=use_proxy_platforms,
         )
 

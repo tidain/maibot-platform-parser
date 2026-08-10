@@ -595,8 +595,8 @@ class PixivParser(BaseParser):
         ]
 
         if blur:
-            if self.mycfg.forward_image:
-                # R18：通过合并转发发送图片
+            if self.mycfg.use_forward:
+                # 合并转发模式：直接发送图片（与非R18路径一致）
                 content_contents: list[MediaContent] = []
                 if illust_type == 2:
                     # 动图 → GIF
@@ -623,7 +623,7 @@ class PixivParser(BaseParser):
                     )
                 )
             else:
-                # R18：封面已模糊，正文合成为 PDF
+                # PDF 模式：合成为 PDF
                 if illust_type == 2:
                     # 动图 → 提取帧 → PDF
                     pdf_task = asyncio.create_task(
@@ -768,24 +768,23 @@ class PixivParser(BaseParser):
         if not img_urls:
             raise ParseException("未找到漫画图片")
 
-        if self.mycfg.forward_image:
-            # 通过合并转发发送图片
+        if self.mycfg.use_forward:
+            # 合并转发模式：直接发送图片
             img_contents = self.create_image_contents(
                 img_urls, headers=PIXIV_IMG_HEADERS
             )
             if self.mycfg.encrypt_image and is_r18:
                 img_contents = await self._encrypt_image_contents(img_contents, True)
-            manga_contents: list[MediaContent] = img_contents
             send_groups: list[SendGroup] = [
                 SendGroup(contents=[], render_card=True, force_merge=False),
                 SendGroup(
-                    contents=manga_contents,
+                    contents=img_contents,
                     render_card=False,
                     force_merge=False,
                 ),
             ]
         else:
-            # 合成为 PDF 发送
+            # PDF 模式：合成为 PDF
             img_paths_task = asyncio.create_task(
                 self.downloader.download_imgs_without_raise(
                     img_urls, headers=PIXIV_IMG_HEADERS, proxy=self.proxy
