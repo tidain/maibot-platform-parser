@@ -1,7 +1,7 @@
 [plugin]
 name = "multi_platform_parser"
-config_version = "1.2.0"
-version = "1.2.0"
+config_version = "1.5.0"
+version = "1.5.0"
 enabled = true
 admin_qqs = []
 
@@ -22,6 +22,7 @@ enable_twitter = true
 enable_weibo = true
 enable_youtube = true
 enable_zhihu = true
+enable_pixiv = false
 
 group_whitelist = []
 block_ai_reply = true
@@ -58,6 +59,7 @@ twitter = ""
 weibo = ""
 youtube = ""
 zhihu = ""
+pixiv = ""
 
 [api]
 host = "127.0.0.1"

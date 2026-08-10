@@ -36,6 +36,25 @@ async def send_video(message: dict[str, Any], path: Path, api: ApiSettings) -> b
     return await _send_message(message, [{"type": "video", "data": {"file": _file_uri(path)}}], api, timeout=300)
 
 
+async def send_file(message: dict[str, Any], path: Path, name: str | None, api: ApiSettings) -> bool:
+    """上传文件到群/私聊。使用 upload_group_file / upload_private_file 接口。"""
+    if _is_private_message(message):
+        user_id = _get_user_id(message)
+        if not user_id:
+            logger.error("Cannot upload private file: missing user id")
+            return False
+        url = f"http://{api.host}:{api.port}/upload_private_file"
+        payload = {"user_id": user_id, "file": _file_uri(path), "name": name or path.name}
+    else:
+        group_id = _get_group_id(message)
+        if not group_id:
+            logger.error("Cannot upload group file: missing group id")
+            return False
+        url = f"http://{api.host}:{api.port}/upload_group_file"
+        payload = {"group_id": group_id, "file": _file_uri(path), "name": name or path.name}
+    return await _post_onebot(url, payload, api, timeout=300)
+
+
 async def send_group_forward(
     message: dict[str, Any],
     nodes: list[list[MessageSegment]],

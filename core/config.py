@@ -16,6 +16,7 @@ class ParserItem:
     video_codecs: str = "AVC"
     video_quality: str = "_720P"
     nsfw: str = ""
+    max_page: int = 0
 
 
 class ParserConfig:
@@ -65,6 +66,9 @@ class PluginConfig:
         weibo_cookies: str = "",
         youtube_cookies: str = "",
         zhihu_cookies: str = "",
+        pixiv_cookies: str = "",
+        pixiv_nsfw: str = "blur",
+        pixiv_max_page: int = 0,
         use_proxy_platforms: list[str] | None = None,
     ):
         self.whitelist: list[str] = []
@@ -195,6 +199,14 @@ class PluginConfig:
                     enable="zhihu" in enabled,
                     use_proxy="zhihu" in proxy_platforms,
                     cookies=zhihu_cookies,
+                ),
+                ParserItem(
+                    "pixiv",
+                    enable="pixiv" in enabled,
+                    use_proxy="pixiv" in proxy_platforms,
+                    cookies=pixiv_cookies,
+                    nsfw=pixiv_nsfw,
+                    max_page=pixiv_max_page,
                 ),
             ]
         )

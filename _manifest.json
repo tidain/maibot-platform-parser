@@ -1,9 +1,9 @@
 {
   "manifest_version": 2,
   "id": "tidain.maibot-platform-parser",
-  "version": "1.2.0",
+  "version": "1.5.0",
   "name": "万能链接解析器",
-  "description": "自动解析抖音、小红书、B站等16个平台链接，并把图文/视频发送到QQ群。基于 Zhalslar/astrbot_plugin_parser 解析核心和 Color2333/maibot-multi-platform-parser 移植框架改进。",
+  "description": "自动解析抖音、小红书、B站等17个平台链接，并把图文/视频发送到QQ群。基于 Zhalslar/astrbot_plugin_parser 解析核心和 Color2333/maibot-multi-platform-parser 移植框架改进。",
   "author": {
     "name": "tidain",
     "url": "https://github.com/tidain"
@@ -75,6 +75,11 @@
       "type": "python_package",
       "name": "pillow",
       "version_spec": ">=10.0.0"
+    },
+    {
+      "type": "python_package",
+      "name": "httpx",
+      "version_spec": ">=0.27.0"
     }
   ],
   "capabilities": [
