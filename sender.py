@@ -60,9 +60,6 @@ async def send_group_forward(
     nodes: list[list[MessageSegment]],
     api: ApiSettings,
 ) -> bool:
-    group_id = _get_group_id(message)
-    if not group_id:
-        return False
     if not nodes:
         return True
 
@@ -77,12 +74,26 @@ async def send_group_forward(
         }
         for node in nodes
     ]
-    return await _post_onebot(
-        f"http://{api.host}:{api.port}/send_group_forward_msg",
-        {"group_id": group_id, "messages": forward_nodes},
-        api,
-        timeout=120,
-    )
+
+    group_id = _get_group_id(message)
+    if group_id:
+        return await _post_onebot(
+            f"http://{api.host}:{api.port}/send_group_forward_msg",
+            {"group_id": group_id, "messages": forward_nodes},
+            api,
+            timeout=120,
+        )
+
+    user_id = _get_user_id(message)
+    if user_id:
+        return await _post_onebot(
+            f"http://{api.host}:{api.port}/send_private_forward_msg",
+            {"user_id": user_id, "messages": forward_nodes},
+            api,
+            timeout=120,
+        )
+
+    return False
 
 
 def text_segment(text: str) -> MessageSegment:
