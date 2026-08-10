@@ -78,7 +78,6 @@ class EncryptSectionConfig(PluginConfigBase):
     __ui_order__ = 2
 
     pixiv_encrypt_image: bool = Field(default=False, description="Pixiv图片是否混淆后发送（仅R18/R18G作品）", json_schema_extra={"label": "Pixiv图片混淆", "hint": "开启后，仅对R18/R18G作品的图片进行像素混淆加密处理，全年龄作品不受影响", "order": 0})
-    acfun_encrypt_image: bool = Field(default=False, description="A站图片是否混淆后发送", json_schema_extra={"label": "A站图片混淆", "hint": "开启后，A站图片会经过像素混淆加密处理后再发送", "order": 1})
 
 
 class NetworkSectionConfig(PluginConfigBase):
@@ -414,7 +413,6 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             zhihu_cookies=self.config.cookies.zhihu,
             pixiv_cookies=self.config.cookies.pixiv,
             pixiv_encrypt_image=self.config.encrypt.pixiv_encrypt_image,
-            acfun_encrypt_image=self.config.encrypt.acfun_encrypt_image,
             use_proxy_platforms=use_proxy_platforms,
         )
 

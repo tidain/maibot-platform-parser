@@ -37,7 +37,6 @@ source_max_minutes = 8         # 视频最大时长（分钟），范围：1-60
 
 [encrypt]
 pixiv_encrypt_image = false   # Pixiv图片混淆（仅R18/R18G作品）
-acfun_encrypt_image = false   # A站图片混淆
 
 [network]
 proxy = ""
