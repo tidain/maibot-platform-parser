@@ -22,7 +22,7 @@ from .core.config import PluginConfig as CorePluginConfig
 from .core.data import DynamicContent, FileContent, GraphicsContent, ImageContent, ParseResult, TextContent, VideoContent
 from .core.download import Downloader
 from .core.exception import ParseException
-from .core.parsers import BaseParser, BilibiliParser
+from .core.parsers import BaseParser, BilibiliParser, PixivParser
 from .sender import ApiSettings, image_segment, send_file, send_group_forward, send_image, send_text, send_video, text_segment
 
 URL_RE = re.compile(r"https?://[^\s\]\)）>\"']+")
@@ -299,6 +299,12 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
         for file_content in files:
             path = await file_content.get_path()
             await send_file(message, path, file_content.name, self.config.api)
+
+        # 如果是 Pixiv 解析且开启了图片混淆，发送解密提示
+        if self.config.parser.pixiv_encrypt_image and result.platform.name == "pixiv":
+            decrypt_url = "https://nj-1307802825.cos-website.ap-nanjing.myqcloud.com/hunxiao//"
+            decrypt_msg = f"图片已混淆加密，访问 {decrypt_url} 上传图片即可解除混淆查看原图"
+            await send_text(message, decrypt_msg, self.config.api)
 
     def _build_core_config(self) -> CorePluginConfig:
         data_dir = Path(__file__).resolve().parents[2] / "data" / "multi_platform_parser"
