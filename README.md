@@ -38,7 +38,7 @@
 
 ### Pixiv 图片混淆功能
 
-开启 `pixiv_encrypt_image = true` 后，Pixiv 图片会经过像素混淆加密处理再发送，用于防止图片被检测风控。
+开启 `pixiv_encrypt_image = true` 后，仅对 R18/R18G 作品的图片进行像素混淆加密处理，全年龄作品不受影响。用于防止图片被检测风控。
 
 **注意**：混淆后的图片无法直接查看原始内容，需要使用解密工具还原：
 
@@ -81,7 +81,7 @@ enable_bilibili = true      # 启用B站解析
 enable_douyin = true        # 启用抖音解析
 enable_xhs = true           # 启用小红书解析
 enable_xiaoheihe = true     # 启用小黑盒解析
-enable_acfun = true         # 启用A站解析
+enable_acfun = false        # 启用A站解析（成人内容平台，默认关闭）
 enable_instagram = true     # 启用Instagram解析
 enable_iwara = false        # 启用iwara解析（成人内容平台，默认关闭）
 enable_kuaishou = true      # 启用快手解析
@@ -94,7 +94,6 @@ enable_weibo = true         # 启用微博解析
 enable_youtube = true       # 启用YouTube解析
 enable_zhihu = true         # 启用知乎解析
 enable_pixiv = false        # 启用Pixiv解析（需配置Cookie，含R18内容，默认关闭）
-pixiv_encrypt_image = false  # Pixiv图片混淆（开启后图片像素混淆加密处理）
 group_whitelist = []        # 允许自动解析的群号，空列表表示所有群
 block_ai_reply = true       # 命中链接后是否阻止麦麦继续普通聊天
 debounce_seconds = 120      # 同一会话同一链接去重时间（秒）
@@ -105,6 +104,13 @@ send_video = true           # 是否发送视频
 use_forward_for_multi = true  # 群聊多图/图文是否使用合并转发
 source_max_size_mb = 80     # 单个媒体最大下载大小（MB），范围：1-300
 source_max_minutes = 8      # 视频最大时长（分钟），范围：1-60
+```
+
+### 混淆配置
+
+```toml
+[encrypt]
+pixiv_encrypt_image = false  # Pixiv图片混淆（仅R18/R18G作品，开启后图片像素混淆加密处理）
 ```
 
 ### 网络配置
