@@ -52,11 +52,26 @@
 > 将加密图片上传到解密工具即可还原为原始图片。
 
 其他特性：
-- 文本/图片/合并转发通过 MaiBot SDK（`ctx.send.*`）发送，享受 SDK 的权限校验与频率控制
+- 文本/图片/合并转发优先通过 MaiBot SDK（`ctx.send.*`）发送，享受 SDK 的权限校验与频率控制
+- SDK 调用失败时自动回退到 OneBot HTTP API，确保消息发送可靠性
 - 视频和文件因 SDK 暂不支持，通过 OneBot HTTP API 直接发送（需配置 `[api]` 中的 host/port/token）
 - 群白名单、去重冷却、媒体大小限制
 - 支持代理配置
 - 支持 Cookie 配置以解锁更多内容
+
+### 消息发送机制与回退策略
+
+插件采用「SDK 优先，HTTP 兜底」的双重保险策略：
+
+| 消息类型 | 主通道（SDK） | 回退通道（OneBot HTTP） | 说明 |
+|---------|-------------|----------------------|------|
+| 文本消息 | `ctx.send.text()` | `send_group_msg`/`send_private_msg` | SDK 异常或返回 False 时自动回退 |
+| 图片消息 | `ctx.send.image()` | `send_group_msg`/`send_private_msg` | SDK 异常或返回 False 时自动回退 |
+| 合并转发 | `ctx.send.forward()` | `send_group_forward_msg`/`send_private_forward_msg` | SDK 异常或返回 False 时自动回退 |
+| 视频消息 | —（SDK 不支持） | `send_group_msg`/`send_private_msg` | 仅 OneBot HTTP |
+| 文件上传 | —（SDK 不支持） | `upload_group_file`/`upload_private_file` | 仅 OneBot HTTP |
+
+> **注意**：SDK 发送失败时会在日志中输出 `SDK send.* 异常/返回 False，回退到 OneBot HTTP` 警告，便于排查问题。命令处理器（开启/关闭解析、B站登录）仅使用 SDK，失败时记录日志但不回退（命令场景无 message context 可用于 HTTP 回退）。
 
 ## 命令
 

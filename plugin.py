@@ -258,10 +258,7 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             await self._send_result(message, result, stream_id)
         except Exception as exc:
             self.ctx.logger.warning("Multi platform parser failed for %s: %s", url, exc)
-            if stream_id:
-                await self.ctx.send.text(f"这个链接解析失败了：{exc}", stream_id)
-            else:
-                await send_text(message, f"这个链接解析失败了：{exc}", self.config.api)
+            await self._send_text(f"这个链接解析失败了：{exc}", stream_id, message)
 
     async def _send_result(self, message: dict[str, Any], result: ParseResult, stream_id: str) -> None:
         header = self._format_header(result)
@@ -336,19 +333,49 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             await self._send_text(decrypt_msg, stream_id, message)
 
     async def _send_text(self, text: str, stream_id: str, message: dict[str, Any]) -> None:
-        """通过 SDK 发送文本消息，stream_id 为空时回退到 OneBot HTTP。"""
+        """通过 SDK 发送文本消息。SDK 失败或 stream_id 为空时回退到 OneBot HTTP。"""
         if stream_id:
-            await self.ctx.send.text(text, stream_id)
-        else:
-            await send_text(message, text, self.config.api)
+            try:
+                result = await self.ctx.send.text(text, stream_id)
+                sent = result if isinstance(result, bool) else bool(result.get("sent", False)) if isinstance(result, dict) else bool(result)
+                if sent:
+                    return
+                self.ctx.logger.warning("SDK send.text 返回 False，回退到 OneBot HTTP")
+            except Exception as exc:
+                self.ctx.logger.warning("SDK send.text 异常，回退到 OneBot HTTP: %s", exc)
+        await send_text(message, text, self.config.api)
 
     async def _send_image(self, path: Path, stream_id: str, message: dict[str, Any]) -> None:
-        """通过 SDK 发送图片（base64），stream_id 为空时回退到 OneBot HTTP。"""
+        """通过 SDK 发送图片（base64）。SDK 失败或 stream_id 为空时回退到 OneBot HTTP。"""
         if stream_id:
-            image_b64 = await asyncio.to_thread(self._read_file_as_base64, path)
+            try:
+                image_b64 = await asyncio.to_thread(self._read_file_as_base64, path)
+                result = await self.ctx.send.image(image_b64, stream_id)
+                sent = result if isinstance(result, bool) else bool(result.get("sent", False)) if isinstance(result, dict) else bool(result)
+                if sent:
+                    return
+                self.ctx.logger.warning("SDK send.image 返回 False，回退到 OneBot HTTP")
+            except Exception as exc:
+                self.ctx.logger.warning("SDK send.image 异常，回退到 OneBot HTTP: %s", exc)
+        await send_image(message, path, self.config.api)
+
+    async def _send_text_safe(self, text: str, stream_id: str) -> None:
+        """命令处理器专用：通过 SDK 发送文本，失败时仅记录日志（无 HTTP fallback）。"""
+        if not stream_id:
+            return
+        try:
+            await self.ctx.send.text(text, stream_id)
+        except Exception as exc:
+            self.ctx.logger.warning("命令回复发送失败: %s", exc)
+
+    async def _send_image_safe(self, image_b64: str, stream_id: str) -> None:
+        """命令处理器专用：通过 SDK 发送图片，失败时仅记录日志（无 HTTP fallback）。"""
+        if not stream_id:
+            return
+        try:
             await self.ctx.send.image(image_b64, stream_id)
-        else:
-            await send_image(message, path, self.config.api)
+        except Exception as exc:
+            self.ctx.logger.warning("命令图片发送失败: %s", exc)
 
     async def _send_forward_via_sdk(self, nodes: list[list[dict[str, Any]]], stream_id: str, message: dict[str, Any]) -> bool:
         """通过 SDK 发送合并转发消息，图片转为 base64。SDK 失败时回退到 OneBot HTTP。"""
@@ -620,13 +647,13 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
         stream_id = str(kwargs.get("stream_id", "") or "")
         user_id = self._get_user_id(kwargs) or ""
         if not self._is_admin(user_id):
-            await self.ctx.send.text("权限不足，只有管理员可以执行此命令", stream_id)
+            await self._send_text_safe("权限不足，只有管理员可以执行此命令", stream_id)
             return True, "权限不足", 2
         if stream_id and stream_id in self._blacklist:
             self._blacklist.remove(stream_id)
-            await self.ctx.send.text("当前会话的解析已开启", stream_id)
+            await self._send_text_safe("当前会话的解析已开启", stream_id)
         else:
-            await self.ctx.send.text("当前会话的解析本来就是开启的", stream_id)
+            await self._send_text_safe("当前会话的解析本来就是开启的", stream_id)
         return True, "已处理", 2
 
     @Command("close_parser", pattern=r"^关闭解析$")
@@ -635,13 +662,13 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
         stream_id = str(kwargs.get("stream_id", "") or "")
         user_id = self._get_user_id(kwargs) or ""
         if not self._is_admin(user_id):
-            await self.ctx.send.text("权限不足，只有管理员可以执行此命令", stream_id)
+            await self._send_text_safe("权限不足，只有管理员可以执行此命令", stream_id)
             return True, "权限不足", 2
         if stream_id and stream_id not in self._blacklist:
             self._blacklist.add(stream_id)
-            await self.ctx.send.text("当前会话的解析已关闭", stream_id)
+            await self._send_text_safe("当前会话的解析已关闭", stream_id)
         else:
-            await self.ctx.send.text("当前会话的解析本来就是关闭的", stream_id)
+            await self._send_text_safe("当前会话的解析本来就是关闭的", stream_id)
         return True, "已处理", 2
 
     @Command("login_bilibili", pattern=r"^(登录B站|blogin|登录b站)$")
@@ -650,23 +677,23 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
         stream_id = str(kwargs.get("stream_id", "") or "")
         user_id = self._get_user_id(kwargs) or ""
         if not self._is_admin(user_id):
-            await self.ctx.send.text("权限不足，只有管理员可以执行此命令", stream_id)
+            await self._send_text_safe("权限不足，只有管理员可以执行此命令", stream_id)
             return True, "权限不足", 2
         parser = self._get_bilibili_parser()
         if not parser:
-            await self.ctx.send.text("B站解析器未启用，请在配置中启用 bilibili 平台", stream_id)
+            await self._send_text_safe("B站解析器未启用，请在配置中启用 bilibili 平台", stream_id)
             return True, "B站解析器未启用", 2
         try:
             qrcode = await parser.login.login_with_qrcode()
             import base64
             qrcode_b64 = base64.b64encode(qrcode).decode()
-            await self.ctx.send.image(qrcode_b64, stream_id)
+            await self._send_image_safe(qrcode_b64, stream_id)
             async for msg in parser.login.check_qr_state():
-                await self.ctx.send.text(msg, stream_id)
+                await self._send_text_safe(msg, stream_id)
             return True, "登录流程已完成", 2
         except Exception as exc:
             self.ctx.logger.warning("B站登录失败: %s", exc)
-            await self.ctx.send.text(f"登录失败: {exc}", stream_id)
+            await self._send_text_safe(f"登录失败: {exc}", stream_id)
             return True, f"登录失败: {exc}", 2
 
 
