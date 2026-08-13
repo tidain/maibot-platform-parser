@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import re
 import sys
 import time
@@ -23,7 +24,7 @@ from .core.data import DynamicContent, FileContent, GraphicsContent, ImageConten
 from .core.download import Downloader
 from .core.exception import ParseException
 from .core.parsers import BaseParser, BilibiliParser
-from .sender import ApiSettings, image_segment, send_file, send_group_forward, send_image, send_text, send_video, text_segment
+from .sender import ApiSettings, image_segment, send_file, send_image, send_text, send_video, text_segment
 
 URL_RE = re.compile(r"https?://[^\s\]\)）>\"']+")
 
@@ -33,8 +34,8 @@ class PluginSectionConfig(PluginConfigBase):
     __ui_order__ = 0
 
     name: str = Field(default="multi_platform_parser", description="插件名称", json_schema_extra={"hidden": True})
-    config_version: str = Field(default="1.2.0", description="配置文件版本", json_schema_extra={"hidden": True})
-    version: str = Field(default="1.2.0", description="插件版本", json_schema_extra={"hidden": True})
+    config_version: str = Field(default="1.7.0", description="配置文件版本", json_schema_extra={"hidden": True})
+    version: str = Field(default="1.7.0", description="插件版本", json_schema_extra={"hidden": True})
     enabled: bool = Field(default=True, description="是否启用插件", json_schema_extra={"label": "启用插件", "hint": "关闭后插件完全停止工作", "order": 0})
     admin_qqs: list[str] = Field(default_factory=list, description="管理员QQ号列表", json_schema_extra={"label": "管理员QQ号", "hint": "只有管理员可以使用开启/关闭解析和登录B站命令，支持多个QQ号", "order": 1})
 
@@ -235,13 +236,14 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             return {"action": "abort"} if self.config.parser.block_ai_reply else None
 
         self.ctx.logger.info("Multi platform link detected: %s %s", parser.platform.display_name, url)
-        asyncio.create_task(self._process_task(parser, keyword, searched, url, message))
+        stream_id = str(kwargs.get("stream_id", "") or "")
+        asyncio.create_task(self._process_task(parser, keyword, searched, url, message, stream_id))
 
         if self.config.parser.block_ai_reply:
             return {"action": "abort"}
         return None
 
-    async def _process_task(self, parser: BaseParser, keyword: str, searched: Any, url: str, message: dict[str, Any]) -> None:
+    async def _process_task(self, parser: BaseParser, keyword: str, searched: Any, url: str, message: dict[str, Any], stream_id: str) -> None:
         try:
             # 根据群聊/私聊设置Pixiv图片混淆开关
             if parser.platform.name == "pixiv":
@@ -253,12 +255,15 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             result = await parser.parse(keyword, searched)
             if not result.url:
                 result.url = url
-            await self._send_result(message, result)
+            await self._send_result(message, result, stream_id)
         except Exception as exc:
             self.ctx.logger.warning("Multi platform parser failed for %s: %s", url, exc)
-            await send_text(message, f"这个链接解析失败了：{exc}", self.config.api)
+            if stream_id:
+                await self.ctx.send.text(f"这个链接解析失败了：{exc}", stream_id)
+            else:
+                await send_text(message, f"这个链接解析失败了：{exc}", self.config.api)
 
-    async def _send_result(self, message: dict[str, Any], result: ParseResult) -> None:
+    async def _send_result(self, message: dict[str, Any], result: ParseResult, stream_id: str) -> None:
         header = self._format_header(result)
         text_nodes: list[list[dict[str, Any]]] = []
         media_items = self._flatten_contents(result)
@@ -300,19 +305,20 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             use_forward = True
         if use_forward and len(nodes) > 1:
             self.ctx.logger.info("尝试合并转发: %d 个节点", len(nodes))
-            sent_forward = await send_group_forward(message, nodes, self.config.api)
+            sent_forward = await self._send_forward_via_sdk(nodes, stream_id)
             if not sent_forward:
                 self.ctx.logger.warning("合并转发失败，回退为逐条发送")
 
         if not sent_forward:
             if header:
-                await send_text(message, header, self.config.api)
+                await self._send_text(header, stream_id, message)
             for node in image_nodes:
                 segment = node[0]
                 if segment.get("type") == "text":
-                    await send_text(message, segment["data"]["text"], self.config.api)
+                    await self._send_text(segment["data"]["text"], stream_id, message)
                 elif segment.get("type") == "image":
-                    await send_image(message, self._path_from_file_segment(segment), self.config.api)
+                    path = self._path_from_file_segment(segment)
+                    await self._send_image(path, stream_id, message)
 
         if self.config.parser.send_video:
             for video in videos[:1]:
@@ -327,7 +333,58 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
         if result.platform.name == "pixiv" and result.extra.get("encrypted"):
             decrypt_url = "https://nj-1307802825.cos-website.ap-nanjing.myqcloud.com/hunxiao//"
             decrypt_msg = f"图片已混淆加密，访问 {decrypt_url} 上传图片即可解除混淆查看原图"
-            await send_text(message, decrypt_msg, self.config.api)
+            await self._send_text(decrypt_msg, stream_id, message)
+
+    async def _send_text(self, text: str, stream_id: str, message: dict[str, Any]) -> None:
+        """通过 SDK 发送文本消息，stream_id 为空时回退到 OneBot HTTP。"""
+        if stream_id:
+            await self.ctx.send.text(text, stream_id)
+        else:
+            await send_text(message, text, self.config.api)
+
+    async def _send_image(self, path: Path, stream_id: str, message: dict[str, Any]) -> None:
+        """通过 SDK 发送图片（base64），stream_id 为空时回退到 OneBot HTTP。"""
+        if stream_id:
+            image_b64 = await asyncio.to_thread(self._read_file_as_base64, path)
+            await self.ctx.send.image(image_b64, stream_id)
+        else:
+            await send_image(message, path, self.config.api)
+
+    async def _send_forward_via_sdk(self, nodes: list[list[dict[str, Any]]], stream_id: str) -> bool:
+        """通过 SDK 发送合并转发消息，图片转为 base64。"""
+        if not stream_id:
+            return False
+
+        forward_messages: list[dict[str, Any]] = []
+        for node in nodes:
+            content: list[dict[str, Any]] = []
+            for seg in node:
+                if seg.get("type") == "image":
+                    path = self._path_from_file_segment(seg)
+                    image_b64 = await asyncio.to_thread(self._read_file_as_base64, path)
+                    content.append({"type": "image", "data": {"file": f"base64://{image_b64}"}})
+                elif seg.get("type") == "text":
+                    content.append(seg)
+            forward_messages.append({
+                "type": "node",
+                "data": {
+                    "name": "麦麦解析",
+                    "uin": self.config.api.bot_uin or "10000",
+                    "content": content,
+                },
+            })
+
+        try:
+            return bool(await self.ctx.send.forward(forward_messages, stream_id))
+        except Exception as exc:
+            self.ctx.logger.warning("SDK 合并转发发送异常: %s", exc)
+            return False
+
+    @staticmethod
+    def _read_file_as_base64(path: Path) -> str:
+        """读取文件并返回 base64 编码字符串。"""
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
 
     def _build_core_config(self) -> CorePluginConfig:
         data_dir = Path(__file__).resolve().parents[2] / "data" / "multi_platform_parser"
