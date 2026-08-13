@@ -24,7 +24,7 @@ from .core.data import DynamicContent, FileContent, GraphicsContent, ImageConten
 from .core.download import Downloader
 from .core.exception import ParseException
 from .core.parsers import BaseParser, BilibiliParser
-from .sender import ApiSettings, image_segment, send_file, send_image, send_text, send_video, text_segment
+from .sender import ApiSettings, image_segment, send_file, send_group_forward, send_image, send_text, send_video, text_segment
 
 URL_RE = re.compile(r"https?://[^\s\]\)）>\"']+")
 
@@ -305,7 +305,7 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             use_forward = True
         if use_forward and len(nodes) > 1:
             self.ctx.logger.info("尝试合并转发: %d 个节点", len(nodes))
-            sent_forward = await self._send_forward_via_sdk(nodes, stream_id)
+            sent_forward = await self._send_forward_via_sdk(nodes, stream_id, message)
             if not sent_forward:
                 self.ctx.logger.warning("合并转发失败，回退为逐条发送")
 
@@ -350,34 +350,44 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
         else:
             await send_image(message, path, self.config.api)
 
-    async def _send_forward_via_sdk(self, nodes: list[list[dict[str, Any]]], stream_id: str) -> bool:
-        """通过 SDK 发送合并转发消息，图片转为 base64。"""
-        if not stream_id:
-            return False
+    async def _send_forward_via_sdk(self, nodes: list[list[dict[str, Any]]], stream_id: str, message: dict[str, Any]) -> bool:
+        """通过 SDK 发送合并转发消息，图片转为 base64。SDK 失败时回退到 OneBot HTTP。"""
+        # 先尝试 SDK
+        if stream_id:
+            forward_messages: list[dict[str, Any]] = []
+            for node in nodes:
+                content: list[dict[str, Any]] = []
+                for seg in node:
+                    if seg.get("type") == "image":
+                        path = self._path_from_file_segment(seg)
+                        image_b64 = await asyncio.to_thread(self._read_file_as_base64, path)
+                        content.append({"type": "image", "data": {"file": f"base64://{image_b64}"}})
+                    elif seg.get("type") == "text":
+                        content.append(seg)
+                forward_messages.append({
+                    "type": "node",
+                    "data": {
+                        "name": "麦麦解析",
+                        "uin": self.config.api.bot_uin or "10000",
+                        "content": content,
+                    },
+                })
 
-        forward_messages: list[dict[str, Any]] = []
-        for node in nodes:
-            content: list[dict[str, Any]] = []
-            for seg in node:
-                if seg.get("type") == "image":
-                    path = self._path_from_file_segment(seg)
-                    image_b64 = await asyncio.to_thread(self._read_file_as_base64, path)
-                    content.append({"type": "image", "data": {"file": f"base64://{image_b64}"}})
-                elif seg.get("type") == "text":
-                    content.append(seg)
-            forward_messages.append({
-                "type": "node",
-                "data": {
-                    "name": "麦麦解析",
-                    "uin": self.config.api.bot_uin or "10000",
-                    "content": content,
-                },
-            })
+            try:
+                result = await self.ctx.send.forward(forward_messages, stream_id)
+                # 处理 bool 或 SendResult 返回值
+                sent = result if isinstance(result, bool) else bool(result.get("sent", False)) if isinstance(result, dict) else bool(result)
+                if sent:
+                    return True
+                self.ctx.logger.warning("SDK 合并转发返回 False，回退到 OneBot HTTP: stream_id=%s, result=%s", stream_id, result)
+            except Exception as exc:
+                self.ctx.logger.warning("SDK 合并转发发送异常，回退到 OneBot HTTP: %s", exc)
 
+        # 回退到 OneBot HTTP
         try:
-            return bool(await self.ctx.send.forward(forward_messages, stream_id))
+            return await send_group_forward(message, nodes, self.config.api)
         except Exception as exc:
-            self.ctx.logger.warning("SDK 合并转发发送异常: %s", exc)
+            self.ctx.logger.warning("OneBot HTTP 合并转发也失败: %s", exc)
             return False
 
     @staticmethod
