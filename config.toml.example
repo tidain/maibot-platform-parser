@@ -19,7 +19,6 @@ enable_nga = true
 enable_shipinhao = true
 enable_tiktok = true
 enable_twitter = true
-twitter_confirm_thirdparty = false  # Twitter解析需将推文链接发送到第三方服务xdown.app，开启此项表示已知悉此风险并同意使用。关闭时即使enable_twitter=true也不会解析Twitter链接
 enable_weibo = true
 enable_youtube = true
 enable_zhihu = true
@@ -37,9 +36,10 @@ pixiv_use_forward = true       # Pixiv图片合并转发发送（关闭则合成
 source_max_size_mb = 80        # 单个媒体最大下载大小（MB），范围：1-300
 source_max_minutes = 8         # 视频最大时长（分钟），范围：1-60
 
-[encrypt]
-pixiv_encrypt_image_group = true    # 群聊Pixiv图片混淆（仅R18/R18G作品，默认开启）
-pixiv_encrypt_image_private = false # 私聊Pixiv图片混淆（仅R18/R18G作品，默认关闭）
+[more]
+pixiv_encrypt_image_group = true      # 群聊Pixiv图片混淆（仅R18/R18G作品，默认开启）
+pixiv_encrypt_image_private = false   # 私聊Pixiv图片混淆（仅R18/R18G作品，默认关闭）
+twitter_confirm_thirdparty = false    # Twitter第三方服务确认（推文链接会转发到xdown.app，开启表示知悉并同意）
 
 [network]
 proxy = ""

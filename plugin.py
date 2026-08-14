@@ -56,8 +56,7 @@ class ParserSectionConfig(PluginConfigBase):
     enable_nga: bool = Field(default=True, description="启用NGA解析", json_schema_extra={"label": "NGA", "hint": "开启NGA链接解析", "order": 9})
     enable_shipinhao: bool = Field(default=True, description="启用微信视频号解析", json_schema_extra={"label": "微信视频号", "hint": "开启微信视频号链接解析", "order": 10})
     enable_tiktok: bool = Field(default=True, description="启用TikTok解析", json_schema_extra={"label": "TikTok", "hint": "开启TikTok链接解析", "order": 11})
-    enable_twitter: bool = Field(default=True, description="启用Twitter/X解析", json_schema_extra={"label": "Twitter/X", "hint": "开启Twitter/X链接解析，注意：推文链接会被转发到第三方服务 xdown.app 进行解析", "order": 12})
-    twitter_confirm_thirdparty: bool = Field(default=False, description="Twitter/X第三方服务确认", json_schema_extra={"label": "Twitter第三方确认", "hint": "Twitter解析需将推文链接发送到第三方服务xdown.app，开启此项表示已知悉此风险并同意使用。关闭时即使enable_twitter=true也不会解析Twitter链接", "order": 12})
+    enable_twitter: bool = Field(default=True, description="启用Twitter/X解析", json_schema_extra={"label": "Twitter/X", "hint": "开启Twitter/X链接解析，注意：推文链接会被转发到第三方服务 xdown.app 进行解析，需在「更多设置」中开启 twitter_confirm_thirdparty 才会实际生效", "order": 12})
     enable_weibo: bool = Field(default=True, description="启用微博解析", json_schema_extra={"label": "微博", "hint": "开启微博链接解析", "order": 13})
     enable_youtube: bool = Field(default=True, description="启用YouTube解析", json_schema_extra={"label": "YouTube", "hint": "开启YouTube链接解析", "order": 14})
     enable_zhihu: bool = Field(default=True, description="启用知乎解析", json_schema_extra={"label": "知乎", "hint": "开启知乎链接解析", "order": 15})
@@ -76,12 +75,13 @@ class ParserSectionConfig(PluginConfigBase):
     source_max_minutes: int = Field(default=8, description="视频最大时长（分钟），范围1-60", ge=1, le=60, json_schema_extra={"label": "最大视频时长(分钟)", "hint": "视频的最大时长限制，范围：1-60分钟", "order": 28})
 
 
-class EncryptSectionConfig(PluginConfigBase):
-    __ui_label__ = "混淆设置"
+class MoreSectionConfig(PluginConfigBase):
+    __ui_label__ = "更多设置"
     __ui_order__ = 2
 
     pixiv_encrypt_image_group: bool = Field(default=True, description="群聊Pixiv图片是否混淆后发送（仅R18/R18G作品）", json_schema_extra={"label": "群聊Pixiv图片混淆", "hint": "开启后，群聊中仅对R18/R18G作品的图片进行像素混淆加密处理，默认开启", "order": 0})
     pixiv_encrypt_image_private: bool = Field(default=False, description="私聊Pixiv图片是否混淆后发送（仅R18/R18G作品）", json_schema_extra={"label": "私聊Pixiv图片混淆", "hint": "开启后，私聊中仅对R18/R18G作品的图片进行像素混淆加密处理，默认关闭", "order": 1})
+    twitter_confirm_thirdparty: bool = Field(default=False, description="Twitter/X第三方服务确认", json_schema_extra={"label": "Twitter第三方确认", "hint": "Twitter解析需将推文链接发送到第三方服务xdown.app，开启此项表示已知悉此风险并同意使用。关闭时即使enable_twitter=true也不会解析Twitter链接", "order": 2})
 
 
 class NetworkSectionConfig(PluginConfigBase):
@@ -149,7 +149,7 @@ class PluginConfig(PluginConfigBase):
 
     plugin: PluginSectionConfig = Field(default_factory=PluginSectionConfig)
     parser: ParserSectionConfig = Field(default_factory=ParserSectionConfig)
-    encrypt: EncryptSectionConfig = Field(default_factory=EncryptSectionConfig)
+    more: MoreSectionConfig = Field(default_factory=MoreSectionConfig)
     network: NetworkSectionConfig = Field(default_factory=NetworkSectionConfig)
     cookies: CookieSectionConfig = Field(default_factory=CookieSectionConfig)
     api: ApiConfig = Field(default_factory=ApiConfig)
@@ -250,8 +250,8 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             if parser.platform.name == "pixiv":
                 is_group = self._get_group_id(message) is not None
                 parser.mycfg.encrypt_image = (
-                    self.config.encrypt.pixiv_encrypt_image_group if is_group
-                    else self.config.encrypt.pixiv_encrypt_image_private
+                    self.config.more.pixiv_encrypt_image_group if is_group
+                    else self.config.more.pixiv_encrypt_image_private
                 )
             result = await parser.parse(keyword, searched)
             if not result.url:
@@ -452,7 +452,7 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
         if self.config.parser.enable_tiktok:
             enabled_platforms.append("tiktok")
         if self.config.parser.enable_twitter:
-            if self.config.parser.twitter_confirm_thirdparty:
+            if self.config.more.twitter_confirm_thirdparty:
                 enabled_platforms.append("twitter")
             else:
                 self.ctx.logger.warning("Twitter/X 解析已启用但未开启第三方服务确认（twitter_confirm_thirdparty=false），跳过Twitter解析。请在配置中开启 twitter_confirm_thirdparty 以表示知悉推文链接会被转发到 xdown.app")
@@ -526,8 +526,8 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             youtube_cookies=self.config.cookies.youtube,
             zhihu_cookies=self.config.cookies.zhihu,
             pixiv_cookies=self.config.cookies.pixiv,
-            pixiv_encrypt_image_group=self.config.encrypt.pixiv_encrypt_image_group,
-            pixiv_encrypt_image_private=self.config.encrypt.pixiv_encrypt_image_private,
+            pixiv_encrypt_image_group=self.config.more.pixiv_encrypt_image_group,
+            pixiv_encrypt_image_private=self.config.more.pixiv_encrypt_image_private,
             pixiv_use_forward=self.config.parser.pixiv_use_forward,
             use_proxy_platforms=use_proxy_platforms,
         )

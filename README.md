@@ -111,8 +111,7 @@ enable_ncm = true           # 启用网易云音乐解析
 enable_nga = true           # 启用NGA解析
 enable_shipinhao = true     # 启用微信视频号解析
 enable_tiktok = true        # 启用TikTok解析
-enable_twitter = true       # 启用Twitter/X解析（需配合 twitter_confirm_thirdparty 使用）
-twitter_confirm_thirdparty = false  # Twitter第三方服务确认（推文链接会转发到xdown.app，开启表示知悉并同意）
+enable_twitter = true       # 启用Twitter/X解析（需在[more]中开启 twitter_confirm_thirdparty 才会实际生效）
 enable_weibo = true         # 启用微博解析
 enable_youtube = true       # 启用YouTube解析
 enable_zhihu = true         # 启用知乎解析
@@ -130,12 +129,13 @@ source_max_size_mb = 80     # 单个媒体最大下载大小（MB），范围：
 source_max_minutes = 8      # 视频最大时长（分钟），范围：1-60
 ```
 
-### 混淆配置
+### 更多设置
 
 ```toml
-[encrypt]
-pixiv_encrypt_image_group = true    # 群聊Pixiv图片混淆（仅R18/R18G作品，默认开启）
-pixiv_encrypt_image_private = false # 私聊Pixiv图片混淆（仅R18/R18G作品，默认关闭）
+[more]
+pixiv_encrypt_image_group = true      # 群聊Pixiv图片混淆（仅R18/R18G作品，默认开启）
+pixiv_encrypt_image_private = false   # 私聊Pixiv图片混淆（仅R18/R18G作品，默认关闭）
+twitter_confirm_thirdparty = false    # Twitter第三方服务确认（推文链接会转发到xdown.app，开启表示知悉并同意）
 ```
 
 ### 网络配置
