@@ -73,6 +73,8 @@
 
 > **注意**：SDK 发送失败时会在日志中输出 `SDK send.* 异常/返回 False，回退到 OneBot HTTP` 警告，便于排查问题。命令处理器（开启/关闭解析、B站登录）仅使用 SDK，失败时记录日志但不回退（命令场景无 message context 可用于 HTTP 回退）。
 
+> **关于 manifest 能力声明**：插件在 `_manifest.json` 中声明了 `send.text`、`send.image`、`send.forward` 三个 SDK 能力，覆盖文本、图片、合并转发三种消息类型。视频消息和文件上传因 SDK 暂不支持对应接口，直接通过 OneBot HTTP API 发送，**不受 manifest 能力声明约束**。这意味着插件实际具备的视频/文件发送能力超出了 manifest 声明范围，这是当前 SDK 能力限制下的折中方案。
+
 ## 命令
 
 | 命令 | 说明 | 权限 |
@@ -109,7 +111,8 @@ enable_ncm = true           # 启用网易云音乐解析
 enable_nga = true           # 启用NGA解析
 enable_shipinhao = true     # 启用微信视频号解析
 enable_tiktok = true        # 启用TikTok解析
-enable_twitter = true       # 启用Twitter/X解析
+enable_twitter = true       # 启用Twitter/X解析（需配合 twitter_confirm_thirdparty 使用）
+twitter_confirm_thirdparty = false  # Twitter第三方服务确认（推文链接会转发到xdown.app，开启表示知悉并同意）
 enable_weibo = true         # 启用微博解析
 enable_youtube = true       # 启用YouTube解析
 enable_zhihu = true         # 启用知乎解析
@@ -221,7 +224,8 @@ bot_uin = ""                # 发送合并转发节点时使用的 bot QQ
 ### xdown.app（Twitter/X 解析）
 
 - **重要提示**：Twitter/X 解析器（`core/parsers/twitter.py`）会将用户发送的推文链接转发到第三方服务 `xdown.app` 的 API（`https://xdown.app/api/ajaxSearch`）进行解析。
-- 这意味着推文链接会被发送到第三方服务器，请评估是否可接受此外部数据流转。如不希望链接外发，请在配置中关闭 Twitter 解析（`enable_twitter = false`）。
+- 这意味着推文链接会被发送到第三方服务器，请评估是否可接受此外部数据流转。
+- **二次确认机制**：即使 `enable_twitter = true`，还必须额外开启 `twitter_confirm_thirdparty = true` 才会实际解析 Twitter 链接。这是强制性的知情同意机制，确保用户明确知悉推文链接会被转发到第三方服务。关闭时会在日志中输出警告。
 
 ## 数据存储与凭据安全
 

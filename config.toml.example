@@ -1,7 +1,7 @@
 [plugin]
 name = "multi_platform_parser"
-config_version = "1.6.5"
-version = "1.6.5"
+config_version = "1.7.0"
+version = "1.7.0"
 enabled = true
 admin_qqs = []
 
@@ -19,6 +19,7 @@ enable_nga = true
 enable_shipinhao = true
 enable_tiktok = true
 enable_twitter = true
+twitter_confirm_thirdparty = false  # Twitter解析需将推文链接发送到第三方服务xdown.app，开启此项表示已知悉此风险并同意使用。关闭时即使enable_twitter=true也不会解析Twitter链接
 enable_weibo = true
 enable_youtube = true
 enable_zhihu = true

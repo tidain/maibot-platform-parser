@@ -78,7 +78,6 @@ class PluginConfig:
     ):
         self.whitelist: list[str] = []
         self.blacklist: list[str] = []
-        self.arbiter = False
         self.debounce_interval = debounce_interval
         self.source_max_size = source_max_size
         self.source_max_minute = source_max_minute

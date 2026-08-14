@@ -56,7 +56,8 @@ class ParserSectionConfig(PluginConfigBase):
     enable_nga: bool = Field(default=True, description="启用NGA解析", json_schema_extra={"label": "NGA", "hint": "开启NGA链接解析", "order": 9})
     enable_shipinhao: bool = Field(default=True, description="启用微信视频号解析", json_schema_extra={"label": "微信视频号", "hint": "开启微信视频号链接解析", "order": 10})
     enable_tiktok: bool = Field(default=True, description="启用TikTok解析", json_schema_extra={"label": "TikTok", "hint": "开启TikTok链接解析", "order": 11})
-    enable_twitter: bool = Field(default=True, description="启用Twitter/X解析", json_schema_extra={"label": "Twitter/X", "hint": "开启Twitter/X链接解析", "order": 12})
+    enable_twitter: bool = Field(default=True, description="启用Twitter/X解析", json_schema_extra={"label": "Twitter/X", "hint": "开启Twitter/X链接解析，注意：推文链接会被转发到第三方服务 xdown.app 进行解析", "order": 12})
+    twitter_confirm_thirdparty: bool = Field(default=False, description="Twitter/X第三方服务确认", json_schema_extra={"label": "Twitter第三方确认", "hint": "Twitter解析需将推文链接发送到第三方服务xdown.app，开启此项表示已知悉此风险并同意使用。关闭时即使enable_twitter=true也不会解析Twitter链接", "order": 12})
     enable_weibo: bool = Field(default=True, description="启用微博解析", json_schema_extra={"label": "微博", "hint": "开启微博链接解析", "order": 13})
     enable_youtube: bool = Field(default=True, description="启用YouTube解析", json_schema_extra={"label": "YouTube", "hint": "开启YouTube链接解析", "order": 14})
     enable_zhihu: bool = Field(default=True, description="启用知乎解析", json_schema_extra={"label": "知乎", "hint": "开启知乎链接解析", "order": 15})
@@ -93,18 +94,18 @@ class NetworkSectionConfig(PluginConfigBase):
     proxy_xhs: bool = Field(default=False, description="小红书使用代理", json_schema_extra={"label": "小红书代理", "hint": "小红书请求是否走代理", "order": 3})
     proxy_xiaoheihe: bool = Field(default=False, description="小黑盒使用代理", json_schema_extra={"label": "小黑盒代理", "hint": "小黑盒请求是否走代理", "order": 4})
     proxy_acfun: bool = Field(default=False, description="A站使用代理", json_schema_extra={"label": "A站代理", "hint": "A站请求是否走代理", "order": 5})
-    proxy_instagram: bool = Field(default=True, description="Instagram使用代理", json_schema_extra={"label": "Instagram代理", "hint": "Instagram请求是否走代理，默认开启", "order": 6})
-    proxy_iwara: bool = Field(default=True, description="iwara使用代理", json_schema_extra={"label": "iwara代理", "hint": "iwara请求是否走代理，默认开启", "order": 7})
+    proxy_instagram: bool = Field(default=True, description="Instagram使用代理", json_schema_extra={"label": "Instagram代理", "hint": "Instagram请求是否走代理，默认开启。留空代理地址则直连，但直连国内网络通常不可用", "order": 6})
+    proxy_iwara: bool = Field(default=True, description="iwara使用代理", json_schema_extra={"label": "iwara代理", "hint": "iwara请求是否走代理，默认开启。留空代理地址则直连，但直连国内网络通常不可用", "order": 7})
     proxy_kuaishou: bool = Field(default=False, description="快手使用代理", json_schema_extra={"label": "快手代理", "hint": "快手请求是否走代理", "order": 8})
     proxy_ncm: bool = Field(default=False, description="网易云音乐使用代理", json_schema_extra={"label": "网易云音乐代理", "hint": "网易云音乐请求是否走代理", "order": 9})
     proxy_nga: bool = Field(default=False, description="NGA使用代理", json_schema_extra={"label": "NGA代理", "hint": "NGA请求是否走代理", "order": 10})
     proxy_shipinhao: bool = Field(default=False, description="微信视频号使用代理", json_schema_extra={"label": "微信视频号代理", "hint": "微信视频号请求是否走代理", "order": 11})
-    proxy_tiktok: bool = Field(default=True, description="TikTok使用代理", json_schema_extra={"label": "TikTok代理", "hint": "TikTok请求是否走代理，默认开启", "order": 12})
-    proxy_twitter: bool = Field(default=True, description="Twitter/X使用代理", json_schema_extra={"label": "Twitter/X代理", "hint": "Twitter/X请求是否走代理，默认开启", "order": 13})
+    proxy_tiktok: bool = Field(default=True, description="TikTok使用代理", json_schema_extra={"label": "TikTok代理", "hint": "TikTok请求是否走代理，默认开启。留空代理地址则直连，但直连国内网络通常不可用", "order": 12})
+    proxy_twitter: bool = Field(default=True, description="Twitter/X使用代理", json_schema_extra={"label": "Twitter/X代理", "hint": "Twitter/X请求是否走代理，默认开启。留空代理地址则直连，但直连国内网络通常不可用", "order": 13})
     proxy_weibo: bool = Field(default=False, description="微博使用代理", json_schema_extra={"label": "微博代理", "hint": "微博请求是否走代理", "order": 14})
-    proxy_youtube: bool = Field(default=True, description="YouTube使用代理", json_schema_extra={"label": "YouTube代理", "hint": "YouTube请求是否走代理，默认开启", "order": 15})
+    proxy_youtube: bool = Field(default=True, description="YouTube使用代理", json_schema_extra={"label": "YouTube代理", "hint": "YouTube请求是否走代理，默认开启。留空代理地址则直连，但直连国内网络通常不可用", "order": 15})
     proxy_zhihu: bool = Field(default=False, description="知乎使用代理", json_schema_extra={"label": "知乎代理", "hint": "知乎请求是否走代理", "order": 16})
-    proxy_pixiv: bool = Field(default=True, description="Pixiv使用代理", json_schema_extra={"label": "Pixiv代理", "hint": "Pixiv请求是否走代理，默认开启", "order": 17})
+    proxy_pixiv: bool = Field(default=True, description="Pixiv使用代理", json_schema_extra={"label": "Pixiv代理", "hint": "Pixiv请求是否走代理，默认开启。留空代理地址则直连，但直连国内网络通常不可用", "order": 17})
     common_timeout: int = Field(default=30, description="普通请求超时秒数", ge=5, le=120, json_schema_extra={"label": "请求超时(秒)", "hint": "普通请求的超时时间", "order": 18})
     download_timeout: int = Field(default=120, description="下载超时秒数", ge=10, le=600, json_schema_extra={"label": "下载超时(秒)", "hint": "文件下载的超时时间", "order": 19})
     download_retry_times: int = Field(default=1, description="下载重试次数", ge=0, le=5, json_schema_extra={"label": "下载重试次数", "hint": "下载失败时的重试次数", "order": 20})
@@ -451,7 +452,10 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
         if self.config.parser.enable_tiktok:
             enabled_platforms.append("tiktok")
         if self.config.parser.enable_twitter:
-            enabled_platforms.append("twitter")
+            if self.config.parser.twitter_confirm_thirdparty:
+                enabled_platforms.append("twitter")
+            else:
+                self.ctx.logger.warning("Twitter/X 解析已启用但未开启第三方服务确认（twitter_confirm_thirdparty=false），跳过Twitter解析。请在配置中开启 twitter_confirm_thirdparty 以表示知悉推文链接会被转发到 xdown.app")
         if self.config.parser.enable_weibo:
             enabled_platforms.append("weibo")
         if self.config.parser.enable_youtube:
