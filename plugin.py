@@ -34,8 +34,8 @@ class PluginSectionConfig(PluginConfigBase):
     __ui_order__ = 0
 
     name: str = Field(default="multi_platform_parser", description="插件名称", json_schema_extra={"hidden": True})
-    config_version: str = Field(default="1.7.0", description="配置文件版本", json_schema_extra={"hidden": True})
-    version: str = Field(default="1.7.0", description="插件版本", json_schema_extra={"hidden": True})
+    config_version: str = Field(default="1.7.1", description="配置文件版本", json_schema_extra={"hidden": True})
+    version: str = Field(default="1.7.1", description="插件版本", json_schema_extra={"hidden": True})
     enabled: bool = Field(default=True, description="是否启用插件", json_schema_extra={"label": "启用插件", "hint": "关闭后插件完全停止工作", "order": 0})
     admin_qqs: list[str] = Field(default_factory=list, description="管理员QQ号列表", json_schema_extra={"label": "管理员QQ号", "hint": "只有管理员可以使用开启/关闭解析和登录B站命令，支持多个QQ号", "order": 1})
 
