@@ -1,7 +1,7 @@
 [plugin]
 name = "multi_platform_parser"
-config_version = "1.7.1"
-version = "1.7.1"
+config_version = "1.7.2"
+version = "1.7.2"
 enabled = true
 admin_qqs = []
 
@@ -10,7 +10,7 @@ enable_bilibili = true
 enable_douyin = true
 enable_xhs = true
 enable_xiaoheihe = true
-enable_acfun = false
+enable_acfun = true
 enable_instagram = true
 enable_iwara = false
 enable_kuaishou = true

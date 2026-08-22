@@ -34,8 +34,8 @@ class PluginSectionConfig(PluginConfigBase):
     __ui_order__ = 0
 
     name: str = Field(default="multi_platform_parser", description="插件名称", json_schema_extra={"hidden": True})
-    config_version: str = Field(default="1.7.1", description="配置文件版本", json_schema_extra={"hidden": True})
-    version: str = Field(default="1.7.1", description="插件版本", json_schema_extra={"hidden": True})
+    config_version: str = Field(default="1.7.2", description="配置文件版本", json_schema_extra={"hidden": True})
+    version: str = Field(default="1.7.2", description="插件版本", json_schema_extra={"hidden": True})
     enabled: bool = Field(default=True, description="是否启用插件", json_schema_extra={"label": "启用插件", "hint": "关闭后插件完全停止工作", "order": 0})
     admin_qqs: list[str] = Field(default_factory=list, description="管理员QQ号列表", json_schema_extra={"label": "管理员QQ号", "hint": "只有管理员可以使用开启/关闭解析和登录B站命令，支持多个QQ号", "order": 1})
 
@@ -48,7 +48,7 @@ class ParserSectionConfig(PluginConfigBase):
     enable_douyin: bool = Field(default=True, description="启用抖音解析", json_schema_extra={"label": "抖音", "hint": "开启抖音链接解析", "order": 1})
     enable_xhs: bool = Field(default=True, description="启用小红书解析", json_schema_extra={"label": "小红书", "hint": "开启小红书链接解析", "order": 2})
     enable_xiaoheihe: bool = Field(default=True, description="启用小黑盒解析", json_schema_extra={"label": "小黑盒", "hint": "开启小黑盒链接解析", "order": 3})
-    enable_acfun: bool = Field(default=False, description="启用A站解析（成人内容平台，请谨慎开启）", json_schema_extra={"label": "A站", "hint": "成人内容平台，默认关闭，请谨慎开启", "order": 4})
+    enable_acfun: bool = Field(default=True, description="启用A站解析", json_schema_extra={"label": "A站", "hint": "开启A站链接解析", "order": 4})
     enable_instagram: bool = Field(default=True, description="启用Instagram解析", json_schema_extra={"label": "Instagram", "hint": "开启Instagram链接解析", "order": 5})
     enable_iwara: bool = Field(default=False, description="启用iwara解析（成人内容平台，请谨慎开启）", json_schema_extra={"label": "iwara", "hint": "成人内容平台，默认关闭，请谨慎开启", "order": 6})
     enable_kuaishou: bool = Field(default=True, description="启用快手解析", json_schema_extra={"label": "快手", "hint": "开启快手链接解析", "order": 7})

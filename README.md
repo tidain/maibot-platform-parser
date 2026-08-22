@@ -103,7 +103,7 @@ enable_bilibili = true      # 启用B站解析
 enable_douyin = true        # 启用抖音解析
 enable_xhs = true           # 启用小红书解析
 enable_xiaoheihe = true     # 启用小黑盒解析
-enable_acfun = false        # 启用A站解析（成人内容平台，默认关闭）
+enable_acfun = true         # 启用A站解析
 enable_instagram = true     # 启用Instagram解析
 enable_iwara = false        # 启用iwara解析（成人内容平台，默认关闭）
 enable_kuaishou = true      # 启用快手解析
@@ -235,7 +235,7 @@ bot_uin = ""                # 发送合并转发节点时使用的 bot QQ
 
 ## ⚠️ 免责声明
 - 本插件仅供技术学习与交流，不鼓励用于任何违规用途。
-- 本插件支持的 iwara、A站、Pixiv 等平台可能包含成人/R18内容。发送此类内容可能违反 QQ/Tencent 服务条款，**存在导致机器人账号被封禁的风险**。使用者需自行承担一切风险和后果，插件开发者不对因使用本插件而造成的任何损失负责。请谨慎使用，并在合规范围内使用本插件。
+- 本插件支持的 iwara、Pixiv 等平台可能包含成人/R18内容。发送此类内容可能违反 QQ/Tencent 服务条款，**存在导致机器人账号被封禁的风险**。使用者需自行承担一切风险和后果，插件开发者不对因使用本插件而造成的任何损失负责。请谨慎使用，并在合规范围内使用本插件。
 
 ## 许可与署名
 
