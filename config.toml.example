@@ -1,7 +1,7 @@
 [plugin]
 name = "multi_platform_parser"
-config_version = "1.7.2"
-version = "1.7.2"
+config_version = "1.7.3"
+version = "1.7.3"
 enabled = true
 admin_qqs = []
 
@@ -16,7 +16,7 @@ enable_iwara = false
 enable_kuaishou = true
 enable_ncm = true
 enable_nga = true
-enable_shipinhao = true
+enable_shipinhao = true     # 启用微信视频号解析（需在[more]中开启 shipinhao_confirm_thirdparty 才会实际生效）
 enable_tiktok = true
 enable_twitter = true
 enable_weibo = true
@@ -40,6 +40,7 @@ source_max_minutes = 8         # 视频最大时长（分钟），范围：1-60
 pixiv_encrypt_image_group = true      # 群聊Pixiv图片混淆（仅R18/R18G作品，默认开启）
 pixiv_encrypt_image_private = false   # 私聊Pixiv图片混淆（仅R18/R18G作品，默认关闭）
 twitter_confirm_thirdparty = false    # Twitter第三方服务确认（推文链接会转发到xdown.app，开启表示知悉并同意）
+shipinhao_confirm_thirdparty = false  # 微信视频号第三方服务确认（分享链接会转发到腾讯元宝，开启表示知悉并同意）
 
 [network]
 proxy = ""

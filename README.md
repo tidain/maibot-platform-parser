@@ -109,7 +109,7 @@ enable_iwara = false        # 启用iwara解析（成人内容平台，默认关
 enable_kuaishou = true      # 启用快手解析
 enable_ncm = true           # 启用网易云音乐解析
 enable_nga = true           # 启用NGA解析
-enable_shipinhao = true     # 启用微信视频号解析
+enable_shipinhao = true     # 启用微信视频号解析（需在[more]中开启 shipinhao_confirm_thirdparty 才会实际生效）
 enable_tiktok = true        # 启用TikTok解析
 enable_twitter = true       # 启用Twitter/X解析（需在[more]中开启 twitter_confirm_thirdparty 才会实际生效）
 enable_weibo = true         # 启用微博解析
@@ -136,6 +136,7 @@ source_max_minutes = 8      # 视频最大时长（分钟），范围：1-60
 pixiv_encrypt_image_group = true      # 群聊Pixiv图片混淆（仅R18/R18G作品，默认开启）
 pixiv_encrypt_image_private = false   # 私聊Pixiv图片混淆（仅R18/R18G作品，默认关闭）
 twitter_confirm_thirdparty = false    # Twitter第三方服务确认（推文链接会转发到xdown.app，开启表示知悉并同意）
+shipinhao_confirm_thirdparty = false  # 微信视频号第三方服务确认（分享链接会转发到腾讯元宝，开启表示知悉并同意）
 ```
 
 ### 网络配置
@@ -226,6 +227,12 @@ bot_uin = ""                # 发送合并转发节点时使用的 bot QQ
 - **重要提示**：Twitter/X 解析器（`core/parsers/twitter.py`）会将用户发送的推文链接转发到第三方服务 `xdown.app` 的 API（`https://xdown.app/api/ajaxSearch`）进行解析。
 - 这意味着推文链接会被发送到第三方服务器，请评估是否可接受此外部数据流转。
 - **二次确认机制**：即使 `enable_twitter = true`，还必须额外开启 `twitter_confirm_thirdparty = true` 才会实际解析 Twitter 链接。这是强制性的知情同意机制，确保用户明确知悉推文链接会被转发到第三方服务。关闭时会在日志中输出警告。
+
+### 腾讯元宝（微信视频号解析）
+
+- **重要提示**：微信视频号解析器（`core/parsers/shipinhao.py`）会将用户发送的视频号分享短链 POST 到腾讯元宝的解析接口（`https://yuanbao.tencent.com/api/weixin/get_parse_result`）换取可播放链接。
+- 这意味着视频号分享链接会被发送到腾讯元宝服务器，请评估是否可接受此外部数据流转。该接口需要配置元宝登录 Cookie（在 `[cookies]` 中设置 `shipinhao`）。
+- **二次确认机制**：即使 `enable_shipinhao = true`，还必须额外开启 `shipinhao_confirm_thirdparty = true` 才会实际解析视频号链接。这是强制性的知情同意机制，确保用户明确知悉分享链接会被转发到腾讯元宝。关闭时会在日志中输出警告。
 
 ## 数据存储与凭据安全
 

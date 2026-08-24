@@ -7,7 +7,6 @@
 - Usage in this MaiBot port:
   - Reused parser core under `core/`
   - Replaced AstrBot message event and send APIs with MaiBot SDK hooks and OneBot HTTP sending
-  - Added a small `astrbot.api.logger` compatibility shim for migrated core modules
 
 ## Color2333/maibot-multi-platform-parser
 

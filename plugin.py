@@ -34,8 +34,8 @@ class PluginSectionConfig(PluginConfigBase):
     __ui_order__ = 0
 
     name: str = Field(default="multi_platform_parser", description="插件名称", json_schema_extra={"hidden": True})
-    config_version: str = Field(default="1.7.2", description="配置文件版本", json_schema_extra={"hidden": True})
-    version: str = Field(default="1.7.2", description="插件版本", json_schema_extra={"hidden": True})
+    config_version: str = Field(default="1.7.3", description="配置文件版本", json_schema_extra={"hidden": True})
+    version: str = Field(default="1.7.3", description="插件版本", json_schema_extra={"hidden": True})
     enabled: bool = Field(default=True, description="是否启用插件", json_schema_extra={"label": "启用插件", "hint": "关闭后插件完全停止工作", "order": 0})
     admin_qqs: list[str] = Field(default_factory=list, description="管理员QQ号列表", json_schema_extra={"label": "管理员QQ号", "hint": "只有管理员可以使用开启/关闭解析和登录B站命令，支持多个QQ号", "order": 1})
 
@@ -54,7 +54,7 @@ class ParserSectionConfig(PluginConfigBase):
     enable_kuaishou: bool = Field(default=True, description="启用快手解析", json_schema_extra={"label": "快手", "hint": "开启快手链接解析", "order": 7})
     enable_ncm: bool = Field(default=True, description="启用网易云音乐解析", json_schema_extra={"label": "网易云音乐", "hint": "开启网易云音乐链接解析", "order": 8})
     enable_nga: bool = Field(default=True, description="启用NGA解析", json_schema_extra={"label": "NGA", "hint": "开启NGA链接解析", "order": 9})
-    enable_shipinhao: bool = Field(default=True, description="启用微信视频号解析", json_schema_extra={"label": "微信视频号", "hint": "开启微信视频号链接解析", "order": 10})
+    enable_shipinhao: bool = Field(default=True, description="启用微信视频号解析", json_schema_extra={"label": "微信视频号", "hint": "开启微信视频号链接解析，需在「更多设置」中开启 shipinhao_confirm_thirdparty 才会实际生效", "order": 10})
     enable_tiktok: bool = Field(default=True, description="启用TikTok解析", json_schema_extra={"label": "TikTok", "hint": "开启TikTok链接解析", "order": 11})
     enable_twitter: bool = Field(default=True, description="启用Twitter/X解析", json_schema_extra={"label": "Twitter/X", "hint": "开启Twitter/X链接解析，注意：推文链接会被转发到第三方服务 xdown.app 进行解析，需在「更多设置」中开启 twitter_confirm_thirdparty 才会实际生效", "order": 12})
     enable_weibo: bool = Field(default=True, description="启用微博解析", json_schema_extra={"label": "微博", "hint": "开启微博链接解析", "order": 13})
@@ -82,6 +82,7 @@ class MoreSectionConfig(PluginConfigBase):
     pixiv_encrypt_image_group: bool = Field(default=True, description="群聊Pixiv图片是否混淆后发送（仅R18/R18G作品）", json_schema_extra={"label": "群聊Pixiv图片混淆", "hint": "开启后，群聊中仅对R18/R18G作品的图片进行像素混淆加密处理，默认开启", "order": 0})
     pixiv_encrypt_image_private: bool = Field(default=False, description="私聊Pixiv图片是否混淆后发送（仅R18/R18G作品）", json_schema_extra={"label": "私聊Pixiv图片混淆", "hint": "开启后，私聊中仅对R18/R18G作品的图片进行像素混淆加密处理，默认关闭", "order": 1})
     twitter_confirm_thirdparty: bool = Field(default=False, description="Twitter/X第三方服务确认", json_schema_extra={"label": "Twitter第三方确认", "hint": "Twitter解析需将推文链接发送到第三方服务xdown.app，开启此项表示已知悉此风险并同意使用。关闭时即使enable_twitter=true也不会解析Twitter链接", "order": 2})
+    shipinhao_confirm_thirdparty: bool = Field(default=False, description="微信视频号第三方服务确认", json_schema_extra={"label": "视频号第三方确认", "hint": "微信视频号解析需将分享链接发送到第三方服务腾讯元宝(yuanbao.tencent.com)，开启此项表示已知悉此风险并同意使用。关闭时即使enable_shipinhao=true也不会解析视频号链接", "order": 3})
 
 
 class NetworkSectionConfig(PluginConfigBase):
@@ -448,7 +449,10 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
         if self.config.parser.enable_nga:
             enabled_platforms.append("nga")
         if self.config.parser.enable_shipinhao:
-            enabled_platforms.append("shipinhao")
+            if self.config.more.shipinhao_confirm_thirdparty:
+                enabled_platforms.append("shipinhao")
+            else:
+                self.ctx.logger.warning("微信视频号解析已启用但未开启第三方服务确认（shipinhao_confirm_thirdparty=false），跳过视频号解析。视频号解析需将分享链接发送到腾讯元宝(yuanbao.tencent.com)，请在「更多设置」中开启 shipinhao_confirm_thirdparty 以表示知悉")
         if self.config.parser.enable_tiktok:
             enabled_platforms.append("tiktok")
         if self.config.parser.enable_twitter:
