@@ -12,7 +12,7 @@
 - **原移植版来源**：`Color2333/maibot-multi-platform-parser`
   - 原仓库：https://github.com/Color2333/maibot-multi-platform-parser
 
-本版本在原移植版基础上扩展了全部17个平台的解析支持，并添加了管理员命令、B站扫码登录等功能。
+本版本在原移植版基础上扩展了全部20个平台的解析支持，并添加了管理员命令、B站扫码登录、群聊@响应、引用消息解析等功能。
 
 ## 功能
 
@@ -35,6 +35,14 @@
 - YouTube（视频）
 - 知乎（回答、文章）
 - Pixiv（插画、漫画、小说、动图，含R18/R18G内容，支持图片混淆加密）
+- CPP 无差别同人站（展品图集、后花园图文）
+- QQ空间（公开分享图文/视频，通过 SnowLuma 获取登录态，默认关闭）
+- Metube（通过你自建的 Metube 服务解析下载，默认关闭）
+
+### 群聊@响应与引用消息解析
+
+- **群聊仅被@才响应**：群聊消息只有 @ 机器人时才会触发解析，私聊不受影响。由 `require_at_in_group` 控制，默认开启。
+- **引用消息解析**：开启 `enable_reply_parse` 后，可以引用（回复）一条含链接的消息并 @ 机器人，插件会通过 OneBot `get_msg` 接口拉取被引用消息原文并解析其中的链接。默认关闭。
 
 ### Pixiv 图片混淆功能
 
@@ -116,6 +124,9 @@ enable_weibo = true         # 启用微博解析
 enable_youtube = true       # 启用YouTube解析
 enable_zhihu = true         # 启用知乎解析
 enable_pixiv = false        # 启用Pixiv解析（需配置Cookie，含R18内容，默认关闭）
+enable_allcpp = true        # 启用CPP无差别同人站解析
+enable_metube = false       # 启用Metube解析（需开启 metube_confirm，默认关闭）
+enable_qzone = false        # 启用QQ空间解析（需开启 qzone_confirm_thirdparty，默认关闭）
 group_whitelist = []        # 允许自动解析的群号，空列表表示所有群
 block_ai_reply = true       # 命中链接后是否阻止麦麦继续普通聊天
 debounce_seconds = 120      # 同一会话同一链接去重时间（秒）
@@ -127,6 +138,9 @@ use_forward_for_multi = true  # 群聊多图/图文是否使用合并转发
 pixiv_use_forward = true      # Pixiv图片合并转发发送（关闭则合成为PDF）
 source_max_size_mb = 80     # 单个媒体最大下载大小（MB），范围：1-300
 source_max_minutes = 8      # 视频最大时长（分钟），范围：1-60
+require_at_in_group = true  # 群聊必须@机器人才触发解析
+enable_reply_parse = false  # 开启引用消息中的链接解析
+metube_url = "http://127.0.0.1:8081"  # 自建 Metube 服务地址
 ```
 
 ### 更多设置
@@ -137,6 +151,8 @@ pixiv_encrypt_image_group = true      # 群聊Pixiv图片混淆（仅R18/R18G作
 pixiv_encrypt_image_private = false   # 私聊Pixiv图片混淆（仅R18/R18G作品，默认关闭）
 twitter_confirm_thirdparty = false    # Twitter第三方服务确认（推文链接会转发到xdown.app，开启表示知悉并同意）
 shipinhao_confirm_thirdparty = false  # 微信视频号第三方服务确认（分享链接会转发到腾讯元宝，开启表示知悉并同意）
+qzone_confirm_thirdparty = false      # QQ空间SnowLuma确认（通过SnowLuma获取登录态凭证，开启表示知悉并同意）
+metube_confirm = false                # Metube确认（链接提交到自建Metube服务，开启表示知悉并同意）
 ```
 
 ### 网络配置
@@ -161,6 +177,9 @@ proxy_weibo = false         # 微博使用代理
 proxy_youtube = true        # YouTube使用代理（默认开启）
 proxy_zhihu = false         # 知乎使用代理
 proxy_pixiv = true          # Pixiv使用代理（默认开启）
+proxy_allcpp = false        # CPP无差别使用代理
+proxy_metube = false        # Metube使用代理（本地服务通常无需开启）
+proxy_qzone = false         # QQ空间使用代理
 common_timeout = 30         # 普通请求超时秒数
 download_timeout = 120      # 下载超时秒数
 download_retry_times = 1    # 下载重试次数
@@ -175,6 +194,8 @@ douyin = ""                 # 抖音 Cookie（可选）
 xhs = ""                    # 小红书 Cookie（可选）
 # ... 其他平台 Cookie
 pixiv = ""                  # Pixiv Cookie（必填，否则无法解析）
+allcpp = ""                 # CPP无差别 Cookie（可选，配置后可解析试阅图集）
+qzone = ""                  # QQ空间 Cookie（SnowLuma不可用时回退，可选）
 ```
 
 ### API 配置
@@ -204,6 +225,7 @@ bot_uin = ""                # 发送合并转发节点时使用的 bot QQ
 | `apilmoji` | 卡片渲染中的 emoji 处理 |
 | `pillow` | 图片处理/卡片渲染 |
 | `httpx` | Pixiv API 请求 |
+| `json5` | QQ空间 CGI JSON5 响应解析 |
 | `gallery-dl` | Instagram 图文解析 |
 
 ## 外部工具与第三方服务
@@ -233,6 +255,18 @@ bot_uin = ""                # 发送合并转发节点时使用的 bot QQ
 - **重要提示**：微信视频号解析器（`core/parsers/shipinhao.py`）会将用户发送的视频号分享短链 POST 到腾讯元宝的解析接口（`https://yuanbao.tencent.com/api/weixin/get_parse_result`）换取可播放链接。
 - 这意味着视频号分享链接会被发送到腾讯元宝服务器，请评估是否可接受此外部数据流转。该接口需要配置元宝登录 Cookie（在 `[cookies]` 中设置 `shipinhao`）。
 - **二次确认机制**：即使 `enable_shipinhao = true`，还必须额外开启 `shipinhao_confirm_thirdparty = true` 才会实际解析视频号链接。这是强制性的知情同意机制，确保用户明确知悉分享链接会被转发到腾讯元宝。关闭时会在日志中输出警告。
+
+### SnowLuma（QQ空间解析）
+
+- **重要提示**：QQ空间解析器（`core/parsers/qzone.py`）默认通过 SnowLuma 的 OneBot HTTP `get_credentials` 动作动态获取 `qzone.qq.com` 登录态凭证。SnowLuma 不可用时会自动回退到手动配置的 QQ空间 Cookie。
+- 本移植版默认复用 `[api]` 中的 `host`/`port`/`token` 作为 SnowLuma 的连接地址与访问令牌，请确保该地址指向可用的 SnowLuma 服务。插件只调用 SnowLuma 的公开 OneBot HTTP action，不读取其私有文件或进程内存。
+- **二次确认机制**：即使 `enable_qzone = true`，还必须额外开启 `qzone_confirm_thirdparty = true` 才会实际解析QQ空间链接。关闭时会在日志中输出警告。
+
+### Metube（自建下载服务解析）
+
+- Metube 解析器（`core/parsers/metube.py`）会把待解析链接提交到你自建的 Metube 服务（地址由 `metube_url` 指定，默认 `http://127.0.0.1:8081`）进行下载与转码，再取回成品文件。
+- Metube 是你自行部署的本地服务，不属于第三方云服务；但仍需开启确认开关。
+- **二次确认机制**：即使 `enable_metube = true`，还必须额外开启 `metube_confirm = true` 才会实际解析。关闭时会在日志中输出警告。
 
 ## 数据存储与凭据安全
 

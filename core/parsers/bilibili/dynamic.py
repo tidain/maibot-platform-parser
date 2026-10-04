@@ -10,7 +10,7 @@ class AuthorInfo(Struct):
     face: str
     mid: int
     pub_time: str
-    pub_ts: int
+    pub_ts: str | int | float
     # jump_url: str
     # following: bool = False
     # official_verify: dict[str, Any] | None = None
@@ -120,7 +120,10 @@ class DynamicModule(Struct):
     @property
     def pub_ts(self) -> int:
         """获取发布时间戳"""
-        return self.module_author.pub_ts
+        try:
+            return int(float(self.module_author.pub_ts))
+        except (ValueError, TypeError):
+            return 0
 
     @property
     def major_info(self) -> dict[str, Any] | None:
@@ -152,7 +155,10 @@ class DynamicInfo(Struct):
     @property
     def timestamp(self) -> int:
         """获取发布时间戳"""
-        return self.modules.pub_ts
+        try:
+            return int(float(self.modules.pub_ts))
+        except (ValueError, TypeError):
+            return 0
 
     @property
     def title(self) -> str | None:

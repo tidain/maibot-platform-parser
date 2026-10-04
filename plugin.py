@@ -24,9 +24,10 @@ from .core.data import DynamicContent, FileContent, GraphicsContent, ImageConten
 from .core.download import Downloader
 from .core.exception import ParseException
 from .core.parsers import BaseParser, BilibiliParser
-from .sender import ApiSettings, image_segment, send_file, send_group_forward, send_image, send_text, send_video, text_segment
+from .sender import ApiSettings, get_message, image_segment, send_file, send_group_forward, send_image, send_text, send_video, text_segment
 
 URL_RE = re.compile(r"https?://[^\s\]\)）>\"']+")
+AT_TEXT_RE = re.compile(r"<@!?([^>\s]+)>")
 
 
 class PluginSectionConfig(PluginConfigBase):
@@ -34,8 +35,8 @@ class PluginSectionConfig(PluginConfigBase):
     __ui_order__ = 0
 
     name: str = Field(default="multi_platform_parser", description="插件名称", json_schema_extra={"hidden": True})
-    config_version: str = Field(default="1.7.3", description="配置文件版本", json_schema_extra={"hidden": True})
-    version: str = Field(default="1.7.3", description="插件版本", json_schema_extra={"hidden": True})
+    config_version: str = Field(default="1.7.4", description="配置文件版本", json_schema_extra={"hidden": True})
+    version: str = Field(default="1.7.4", description="插件版本", json_schema_extra={"hidden": True})
     enabled: bool = Field(default=True, description="是否启用插件", json_schema_extra={"label": "启用插件", "hint": "关闭后插件完全停止工作", "order": 0})
     admin_qqs: list[str] = Field(default_factory=list, description="管理员QQ号列表", json_schema_extra={"label": "管理员QQ号", "hint": "只有管理员可以使用开启/关闭解析和登录B站命令，支持多个QQ号", "order": 1})
 
@@ -61,6 +62,9 @@ class ParserSectionConfig(PluginConfigBase):
     enable_youtube: bool = Field(default=True, description="启用YouTube解析", json_schema_extra={"label": "YouTube", "hint": "开启YouTube链接解析", "order": 14})
     enable_zhihu: bool = Field(default=True, description="启用知乎解析", json_schema_extra={"label": "知乎", "hint": "开启知乎链接解析", "order": 15})
     enable_pixiv: bool = Field(default=False, description="启用Pixiv解析（需配置Cookie，含R18内容）", json_schema_extra={"label": "Pixiv", "hint": "Pixiv解析需配置Cookie才能访问，含R18内容，默认关闭", "order": 16})
+    enable_allcpp: bool = Field(default=True, description="启用CPP无差别同人站解析", json_schema_extra={"label": "CPP无差别", "hint": "开启 allcpp.cn 链接解析，展品试阅图集可能需要配置Cookie", "order": 30})
+    enable_metube: bool = Field(default=False, description="启用Metube解析", json_schema_extra={"label": "Metube", "hint": "通过你自建的 Metube 服务解析/下载链接，默认关闭，需在「更多设置」中开启 metube_confirm 才会实际生效", "order": 31})
+    enable_qzone: bool = Field(default=False, description="启用QQ空间解析", json_schema_extra={"label": "QQ空间", "hint": "开启QQ空间分享链接解析，默认关闭，需在「更多设置」中开启 qzone_confirm_thirdparty 才会实际生效", "order": 32})
 
     group_whitelist: list[str] = Field(default_factory=list, description="只在这些QQ群自动解析", json_schema_extra={"label": "群白名单", "hint": "空列表表示所有群都允许解析", "order": 17})
     block_ai_reply: bool = Field(default=True, description="命中链接后阻止麦麦继续触发普通聊天", json_schema_extra={"label": "阻止AI回复", "hint": "开启后命中链接时麦麦不会继续聊天", "order": 18})
@@ -73,6 +77,9 @@ class ParserSectionConfig(PluginConfigBase):
     pixiv_use_forward: bool = Field(default=True, description="Pixiv图片使用合并转发逐张发送（关闭则合成为PDF）", json_schema_extra={"label": "Pixiv合并转发", "hint": "开启后Pixiv图片通过合并转发逐张发送，关闭则合成为PDF文件", "order": 26})
     source_max_size_mb: int = Field(default=80, description="单个媒体最大下载大小（MB），范围1-300", ge=1, le=300, json_schema_extra={"label": "最大文件大小(MB)", "hint": "单个媒体文件的最大下载大小，范围：1-300MB", "order": 27})
     source_max_minutes: int = Field(default=8, description="视频最大时长（分钟），范围1-60", ge=1, le=60, json_schema_extra={"label": "最大视频时长(分钟)", "hint": "视频的最大时长限制，范围：1-60分钟", "order": 28})
+    require_at_in_group: bool = Field(default=True, description="群聊中必须@机器人才触发解析", json_schema_extra={"label": "群聊需@机器人", "hint": "开启后，群聊消息只有@机器人时才会触发解析；私聊不受影响", "order": 33})
+    enable_reply_parse: bool = Field(default=False, description="开启引用消息中的链接解析", json_schema_extra={"label": "引用消息解析", "hint": "开启后，引用（回复）一条含链接的消息并@机器人时，也会解析其中的链接", "order": 34})
+    metube_url: str = Field(default="http://127.0.0.1:8081", description="Metube 服务地址", json_schema_extra={"label": "Metube地址", "hint": "你自建的 Metube 服务地址，如 http://127.0.0.1:8081；若部署在子路径需带上路径", "order": 35})
 
 
 class MoreSectionConfig(PluginConfigBase):
@@ -83,6 +90,8 @@ class MoreSectionConfig(PluginConfigBase):
     pixiv_encrypt_image_private: bool = Field(default=False, description="私聊Pixiv图片是否混淆后发送（仅R18/R18G作品）", json_schema_extra={"label": "私聊Pixiv图片混淆", "hint": "开启后，私聊中仅对R18/R18G作品的图片进行像素混淆加密处理，默认关闭", "order": 1})
     twitter_confirm_thirdparty: bool = Field(default=False, description="Twitter/X第三方服务确认", json_schema_extra={"label": "Twitter第三方确认", "hint": "Twitter解析需将推文链接发送到第三方服务xdown.app，开启此项表示已知悉此风险并同意使用。关闭时即使enable_twitter=true也不会解析Twitter链接", "order": 2})
     shipinhao_confirm_thirdparty: bool = Field(default=False, description="微信视频号第三方服务确认", json_schema_extra={"label": "视频号第三方确认", "hint": "微信视频号解析需将分享链接发送到第三方服务腾讯元宝(yuanbao.tencent.com)，开启此项表示已知悉此风险并同意使用。关闭时即使enable_shipinhao=true也不会解析视频号链接", "order": 3})
+    qzone_confirm_thirdparty: bool = Field(default=False, description="QQ空间SnowLuma服务确认", json_schema_extra={"label": "QQ空间SnowLuma确认", "hint": "QQ空间解析需通过 SnowLuma 服务获取登录态凭证（OneBot get_credentials），开启此项表示已知悉并同意。关闭时即使enable_qzone=true也不会解析QQ空间链接", "order": 4})
+    metube_confirm: bool = Field(default=False, description="Metube 服务确认", json_schema_extra={"label": "Metube确认", "hint": "Metube 解析会把待解析链接提交到你自建的 Metube 服务处理，开启此项表示已知悉。关闭时即使enable_metube=true也不会解析", "order": 5})
 
 
 class NetworkSectionConfig(PluginConfigBase):
@@ -107,6 +116,9 @@ class NetworkSectionConfig(PluginConfigBase):
     proxy_youtube: bool = Field(default=True, description="YouTube使用代理", json_schema_extra={"label": "YouTube代理", "hint": "YouTube请求是否走代理，默认开启。留空代理地址则直连，但直连国内网络通常不可用", "order": 15})
     proxy_zhihu: bool = Field(default=False, description="知乎使用代理", json_schema_extra={"label": "知乎代理", "hint": "知乎请求是否走代理", "order": 16})
     proxy_pixiv: bool = Field(default=True, description="Pixiv使用代理", json_schema_extra={"label": "Pixiv代理", "hint": "Pixiv请求是否走代理，默认开启。留空代理地址则直连，但直连国内网络通常不可用", "order": 17})
+    proxy_allcpp: bool = Field(default=False, description="CPP无差别使用代理", json_schema_extra={"label": "CPP无差别代理", "hint": "CPP无差别请求是否走代理", "order": 21})
+    proxy_metube: bool = Field(default=False, description="Metube使用代理", json_schema_extra={"label": "Metube代理", "hint": "请求 Metube 服务是否走代理（本地服务通常无需开启）", "order": 22})
+    proxy_qzone: bool = Field(default=False, description="QQ空间使用代理", json_schema_extra={"label": "QQ空间代理", "hint": "QQ空间请求是否走代理", "order": 23})
     common_timeout: int = Field(default=30, description="普通请求超时秒数", ge=5, le=120, json_schema_extra={"label": "请求超时(秒)", "hint": "普通请求的超时时间", "order": 18})
     download_timeout: int = Field(default=120, description="下载超时秒数", ge=10, le=600, json_schema_extra={"label": "下载超时(秒)", "hint": "文件下载的超时时间", "order": 19})
     download_retry_times: int = Field(default=1, description="下载重试次数", ge=0, le=5, json_schema_extra={"label": "下载重试次数", "hint": "下载失败时的重试次数", "order": 20})
@@ -133,6 +145,8 @@ class CookieSectionConfig(PluginConfigBase):
     youtube: str = Field(default="", description="YouTube Cookie", json_schema_extra={"label": "YouTube", "hint": "YouTube账号的Cookie，可选", "order": 14})
     zhihu: str = Field(default="", description="知乎 Cookie", json_schema_extra={"label": "知乎", "hint": "知乎账号的Cookie，可选", "order": 15})
     pixiv: str = Field(default="", description="Pixiv Cookie", json_schema_extra={"label": "Pixiv", "hint": "Pixiv账号的Cookie，必填，否则无法解析", "order": 16})
+    allcpp: str = Field(default="", description="CPP无差别 Cookie", json_schema_extra={"label": "CPP无差别", "hint": "CPP无差别账号的Cookie，可选，配置后可解析试阅图集", "order": 17})
+    qzone: str = Field(default="", description="QQ空间 Cookie", json_schema_extra={"label": "QQ空间", "hint": "QQ空间手动Cookie，SnowLuma不可用时作为回退，可选", "order": 18})
 
 
 class ApiConfig(PluginConfigBase):
@@ -215,7 +229,20 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
         if session_id in self._blacklist:
             return None
 
+        # 群聊中要求 @机器人：未 @ 自己时直接跳过
+        if (
+            self._get_group_id(message) is not None
+            and self.config.parser.require_at_in_group
+            and not self._is_at_me(message)
+        ):
+            return None
+
         source = self._message_source(message)
+        # 引用（回复）消息：拉取被引用消息原文，并入待解析文本
+        if self.config.parser.enable_reply_parse:
+            reply_source = await self._reply_source(message)
+            if reply_source:
+                source = f"{source}\n{reply_source}"
         candidates = self._extract_urls(source)
         matched: tuple[BaseParser, str, Any, str] | None = None
         for url in candidates:
@@ -438,6 +465,8 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             enabled_platforms.append("xiaoheihe")
         if self.config.parser.enable_acfun:
             enabled_platforms.append("acfun")
+        if self.config.parser.enable_allcpp:
+            enabled_platforms.append("allcpp")
         if self.config.parser.enable_instagram:
             enabled_platforms.append("instagram")
         if self.config.parser.enable_iwara:
@@ -448,6 +477,11 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             enabled_platforms.append("ncm")
         if self.config.parser.enable_nga:
             enabled_platforms.append("nga")
+        if self.config.parser.enable_qzone:
+            if self.config.more.qzone_confirm_thirdparty:
+                enabled_platforms.append("qzone")
+            else:
+                self.ctx.logger.warning("QQ空间解析已启用但未开启 SnowLuma 服务确认（qzone_confirm_thirdparty=false），跳过QQ空间解析。QQ空间解析需通过 SnowLuma 获取登录态凭证，请在「更多设置」中开启 qzone_confirm_thirdparty 以表示知悉")
         if self.config.parser.enable_shipinhao:
             if self.config.more.shipinhao_confirm_thirdparty:
                 enabled_platforms.append("shipinhao")
@@ -468,6 +502,11 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             enabled_platforms.append("zhihu")
         if self.config.parser.enable_pixiv:
             enabled_platforms.append("pixiv")
+        if self.config.parser.enable_metube:
+            if self.config.more.metube_confirm:
+                enabled_platforms.append("metube")
+            else:
+                self.ctx.logger.warning("Metube 解析已启用但未开启 Metube 服务确认（metube_confirm=false），跳过 Metube 解析。请在「更多设置」中开启 metube_confirm 以表示知悉待解析链接将提交到你的 Metube 服务")
         use_proxy_platforms = []
         if self.config.network.proxy_bilibili:
             use_proxy_platforms.append("bilibili")
@@ -503,6 +542,12 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             use_proxy_platforms.append("zhihu")
         if self.config.network.proxy_pixiv:
             use_proxy_platforms.append("pixiv")
+        if self.config.network.proxy_allcpp:
+            use_proxy_platforms.append("allcpp")
+        if self.config.network.proxy_metube:
+            use_proxy_platforms.append("metube")
+        if self.config.network.proxy_qzone:
+            use_proxy_platforms.append("qzone")
         return CorePluginConfig(
             data_dir=data_dir,
             enabled_platforms=enabled_platforms,
@@ -518,6 +563,12 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
             xhs_cookies=self.config.cookies.xhs,
             xiaoheihe_cookies=self.config.cookies.xiaoheihe,
             acfun_cookies=self.config.cookies.acfun,
+            allcpp_cookies=self.config.cookies.allcpp,
+            qzone_cookies=self.config.cookies.qzone,
+            qzone_credential_source="snowluma",
+            snowluma_http_url=f"http://{self.config.api.host}:{self.config.api.port}",
+            snowluma_access_token=self.config.api.token,
+            metube_url=self.config.parser.metube_url,
             instagram_cookies=self.config.cookies.instagram,
             iwara_cookies=self.config.cookies.iwara,
             kuaishou_cookies=self.config.cookies.kuaishou,
@@ -568,6 +619,83 @@ class MultiPlatformParserPlugin(MaiBotPlugin):
                 continue
             data = seg.get("data", {})
             if isinstance(data, dict):
+                for key in ("url", "source_url", "jumpUrl", "content"):
+                    value = data.get(key)
+                    if value:
+                        parts.append(str(value))
+        return "\n".join(parts)
+
+    def _resolve_self_id(self, message: dict[str, Any]) -> str | None:
+        """尽力解析机器人自身在当前平台的用户ID。"""
+        message_info = message.get("message_info", {})
+        if not isinstance(message_info, dict):
+            message_info = {}
+        candidate = message.get("self_id") or message_info.get("self_id")
+        if candidate:
+            return str(candidate)
+        for key in ("bot_self_info", "self_info", "bot_info"):
+            info = message_info.get(key)
+            if isinstance(info, dict) and info.get("user_id"):
+                return str(info["user_id"])
+        bot_uin = str(self.config.api.bot_uin or "").strip()
+        return bot_uin or None
+
+    def _is_at_me(self, message: dict[str, Any]) -> bool:
+        """判断本条消息是否 @ 了机器人。"""
+        self_id = self._resolve_self_id(message)
+        mentioned: set[str] = set()
+        for seg in message.get("raw_message", []) or []:
+            if not isinstance(seg, dict):
+                continue
+            stype = str(seg.get("type", "") or "").lower()
+            data = seg.get("data", {}) if isinstance(seg.get("data"), dict) else {}
+            if stype == "at":
+                for key in ("qq", "user_id", "at_user_id"):
+                    value = data.get(key)
+                    if value is not None and str(value) not in ("all", "0"):
+                        mentioned.add(str(value))
+            text_value = data.get("text")
+            if isinstance(text_value, str):
+                mentioned.update(AT_TEXT_RE.findall(text_value))
+        mentioned.update(AT_TEXT_RE.findall(str(message.get("processed_plain_text", "") or "")))
+        if not self_id:
+            # 无法确定自身ID时放行，避免误伤正常解析
+            self.ctx.logger.debug("无法解析机器人自身ID，@检查放行: mentions=%s", mentioned)
+            return True
+        return self_id in mentioned
+
+    async def _reply_source(self, message: dict[str, Any]) -> str:
+        """找到 Reply 段并通过 OneBot get_msg 拉取被引用消息，返回其中可解析文本/URL。"""
+        reply_id: str | None = None
+        for seg in message.get("raw_message", []) or []:
+            if not isinstance(seg, dict):
+                continue
+            stype = str(seg.get("type", "") or "").lower()
+            if stype in ("reply", "quote"):
+                data = seg.get("data", {}) if isinstance(seg.get("data"), dict) else {}
+                for key in ("id", "reply_to", "message_id"):
+                    value = data.get(key)
+                    if value:
+                        reply_id = str(value)
+                        break
+            if reply_id:
+                break
+        if not reply_id:
+            return ""
+        chain = await get_message(reply_id, self.config.api)
+        if not chain:
+            return ""
+        parts: list[str] = []
+        for seg in chain:
+            if not isinstance(seg, dict):
+                continue
+            data = seg.get("data", {}) if isinstance(seg.get("data"), dict) else {}
+            stype = str(seg.get("type", "") or "").lower()
+            if stype == "text":
+                value = data.get("text")
+                if value:
+                    parts.append(str(value))
+            else:
                 for key in ("url", "source_url", "jumpUrl", "content"):
                     value = data.get(key)
                     if value:

@@ -19,6 +19,21 @@ class ParserItem:
     max_page: int = 0
     encrypt_image: bool = False
     use_forward: bool = True
+    # allcpp（后花园图文）
+    show_work_content: bool = False
+    text_max_length: int = 100
+    # qzone（QQ空间 / SnowLuma）
+    qzone_credential_source: str = "manual"
+    send_blue_links: bool = False
+    snowluma_http_url: str = ""
+    snowluma_access_token: str = ""
+    snowluma_credential_cache_seconds: int = 300
+    # metube（自建 Metube 下载服务）
+    metube_url: str = ""
+    wait_timeout: int = 600
+    video_codec: str = "h264"
+    video_format: str = "mp4"
+    delete_after_fetch: bool = False
 
 
 class ParserConfig:
@@ -56,6 +71,20 @@ class PluginConfig:
         xiaoheihe_cookies: str = "",
         xiaoheihe_show_body_text: bool = True,
         acfun_cookies: str = "",
+        allcpp_cookies: str = "",
+        allcpp_show_work_content: bool = False,
+        qzone_cookies: str = "",
+        qzone_credential_source: str = "manual",
+        qzone_send_blue_links: bool = False,
+        snowluma_http_url: str = "",
+        snowluma_access_token: str = "",
+        snowluma_credential_cache_seconds: int = 300,
+        metube_url: str = "",
+        metube_wait_timeout: int = 600,
+        metube_video_quality: str = "720",
+        metube_video_codec: str = "h264",
+        metube_video_format: str = "mp4",
+        metube_delete_after_fetch: bool = False,
         instagram_cookies: str = "",
         iwara_cookies: str = "",
         iwara_nsfw: str = "blur",
@@ -138,6 +167,13 @@ class PluginConfig:
                     cookies=acfun_cookies,
                 ),
                 ParserItem(
+                    "allcpp",
+                    enable="allcpp" in enabled,
+                    use_proxy="allcpp" in proxy_platforms,
+                    cookies=allcpp_cookies,
+                    show_work_content=allcpp_show_work_content,
+                ),
+                ParserItem(
                     "instagram",
                     enable="instagram" in enabled,
                     use_proxy="instagram" in proxy_platforms,
@@ -167,6 +203,17 @@ class PluginConfig:
                     enable="nga" in enabled,
                     use_proxy="nga" in proxy_platforms,
                     cookies=nga_cookies,
+                ),
+                ParserItem(
+                    "qzone",
+                    enable="qzone" in enabled,
+                    use_proxy="qzone" in proxy_platforms,
+                    cookies=qzone_cookies,
+                    qzone_credential_source=qzone_credential_source,
+                    send_blue_links=qzone_send_blue_links,
+                    snowluma_http_url=snowluma_http_url,
+                    snowluma_access_token=snowluma_access_token,
+                    snowluma_credential_cache_seconds=snowluma_credential_cache_seconds,
                 ),
                 ParserItem(
                     "shipinhao",
@@ -213,6 +260,17 @@ class PluginConfig:
                     max_page=pixiv_max_page,
                     encrypt_image=False,  # 由 plugin.py 根据群聊/私聊动态设置
                     use_forward=pixiv_use_forward,
+                ),
+                ParserItem(
+                    "metube",
+                    enable="metube" in enabled,
+                    use_proxy="metube" in proxy_platforms,
+                    metube_url=metube_url,
+                    wait_timeout=metube_wait_timeout,
+                    video_quality=metube_video_quality,
+                    video_codec=metube_video_codec,
+                    video_format=metube_video_format,
+                    delete_after_fetch=metube_delete_after_fetch,
                 ),
             ]
         )

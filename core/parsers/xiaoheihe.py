@@ -2,12 +2,11 @@ import asyncio
 import hashlib
 import html
 import json
-from pathlib import Path
 import random
 import re
 import time
-from urllib.parse import parse_qs, urlparse
 from typing import Any, ClassVar
+from urllib.parse import urlparse
 
 from curl_cffi import requests as curl_requests
 
@@ -16,7 +15,6 @@ from ..data import MediaContent, Platform, SendGroup, TextContent, VideoContent
 from ..download import Downloader
 from ..exception import ParseException
 from .base import BaseParser, handle
-
 
 V4_EP = (
     "V1ZCERzVgMWrKv+VcTl5QmS9JuPWLOQ8A0mACeTyYXtTbiguOrHhwaqnagZ6zdAgF"
@@ -177,20 +175,44 @@ class XiaoheiheParser(BaseParser):
         final_url = f"https://www.xiaoheihe.cn/app/bbs/link/{link_id}"
         author = self._build_author(link)
 
-        body_text, image_urls = self._parse_body_text_and_images(link)
+        segments = self._parse_body_segments(link)
+        body_text = "\n\n".join(
+            value for kind, value in segments if kind == "text"
+        ).strip()
+        image_urls = [value for kind, value in segments if kind == "image"]
         video_content = self._build_video_content(link)
         show_body_text = bool(getattr(self.mycfg, "show_body_text", False))
-        text_content = TextContent(body_text) if show_body_text and body_text else None
 
+        # 构建发送内容
+        # 注意：旧配置缺少这些字段时，ConfigNode 会返回 None 而非触发 getattr 默认值，
+        # 因此仅将显式的 False 视为关闭，None（未配置）按默认开启处理。
+        mixed_layout = getattr(self.mycfg, "mixed_layout", None) is not False
         contents: list[MediaContent] = []
-        if image_urls:
-            contents.extend(
-                self.create_image_contents(image_urls, headers=self.headers)
-            )
-        if video_content is not None:
-            contents.append(video_content)
-        if text_content is not None:
-            contents.append(text_content)
+
+        if mixed_layout:
+            # 图文混排：文字块与图片块按原文顺序交错
+            for kind, value in segments:
+                if kind == "image":
+                    contents.extend(
+                        self.create_image_contents([value], headers=self.headers)
+                    )
+                elif kind == "text" and show_body_text:
+                    contents.append(TextContent(value))
+            if video_content is not None:
+                contents.append(video_content)
+        else:
+            # 旧排版：先发完全部图片（含视频），再统一发文字
+            for kind, value in segments:
+                if kind == "image":
+                    contents.extend(
+                        self.create_image_contents([value], headers=self.headers)
+                    )
+            if video_content is not None:
+                contents.append(video_content)
+            if show_body_text:
+                for kind, value in segments:
+                    if kind == "text":
+                        contents.append(TextContent(value))
 
         send_groups: list[SendGroup] = []
         primary_contents = [
@@ -378,27 +400,15 @@ class XiaoheiheParser(BaseParser):
             **sig,
         }
 
-        cookies = {"x_xhh_tokenid": request_ctx["x_xhh_tokenid"]}
-        cookie_header = self.headers.get("cookie", "")
-        if cookie_header:
-            for part in cookie_header.split(";"):
-                part = part.strip()
-                if "=" in part:
-                    key, value = part.split("=", 1)
-                    if key and value:
-                        cookies[key.strip()] = value.strip()
-
         payload = await self._request_json(
             "GET",
             "https://api.xiaoheihe.cn/bbs/app/link/tree",
             params=params,
-            cookies=cookies,
+            cookies={"x_xhh_tokenid": request_ctx["x_xhh_tokenid"]},
             headers=self.headers,
         )
         status = payload.get("status")
         if status != "ok":
-            if status == "show_captcha":
-                raise ParseException("小黑盒请求需要验证，请在配置中添加小黑盒 Cookie")
             raise ParseException(f"小黑盒 link/tree 请求失败: {status}")
         result = payload.get("result")
         if not isinstance(result, dict):
@@ -867,23 +877,44 @@ class XiaoheiheParser(BaseParser):
             )
         return self.create_video_content(video_url, cover_url, headers=self.headers)
 
-    def _parse_body_text_and_images(
+    def _parse_body_segments(
         self, link: dict[str, Any]
-    ) -> tuple[str, list[str]]:
+    ) -> list[tuple[str, str]]:
+        """解析正文，返回保持原文顺序的图文段列表。
+
+        每项为 ("text", 文本) 或 ("image", 图片URL)；
+        相邻的文本块会合并为一段。
+        """
         raw_text = link.get("text")
         if not isinstance(raw_text, str) or not raw_text.strip():
-            return "", []
+            return []
         try:
             blocks = json.loads(raw_text)
         except json.JSONDecodeError:
-            return self._clean_text(raw_text), []
+            cleaned = self._clean_text(raw_text)
+            return [("text", cleaned)] if cleaned else []
 
         if not isinstance(blocks, list):
-            return self._clean_text(raw_text), []
+            cleaned = self._clean_text(raw_text)
+            return [("text", cleaned)] if cleaned else []
 
-        text_parts: list[str] = []
-        image_urls: list[str] = []
+        segments: list[tuple[str, str]] = []
         seen_images: set[str] = set()
+
+        def push_text(value: str) -> None:
+            value = value.strip()
+            if not value:
+                return
+            if segments and segments[-1][0] == "text":
+                segments[-1] = ("text", segments[-1][1] + "\n\n" + value)
+            else:
+                segments.append(("text", value))
+
+        def push_image(url: str) -> None:
+            dedup_key = self._image_dedup_key(url)
+            if url and dedup_key and dedup_key not in seen_images:
+                seen_images.add(dedup_key)
+                segments.append(("image", url))
 
         for block in blocks:
             if not isinstance(block, dict):
@@ -891,40 +922,46 @@ class XiaoheiheParser(BaseParser):
 
             block_type = str(block.get("type") or "")
             if block_type == "img":
-                url = self._normalize_image_url(str(block.get("url") or "").strip())
-                dedup_key = self._image_dedup_key(url)
-                if url and dedup_key and dedup_key not in seen_images:
-                    seen_images.add(dedup_key)
-                    image_urls.append(url)
+                push_image(
+                    self._normalize_image_url(str(block.get("url") or "").strip())
+                )
                 continue
 
             html_text = str(block.get("text") or "")
             if html_text:
-                cleaned = self._html_block_to_text(html_text)
-                if cleaned:
-                    text_parts.append(cleaned)
-                for image_url in self._extract_images_from_html_block(html_text):
-                    dedup_key = self._image_dedup_key(image_url)
-                    if dedup_key and dedup_key not in seen_images:
-                        seen_images.add(dedup_key)
-                        image_urls.append(image_url)
+                for kind, value in self._parse_html_block_segments(html_text):
+                    if kind == "text":
+                        push_text(value)
+                    else:
+                        push_image(value)
 
-        text = "\n\n".join(part for part in text_parts if part).strip()
-        return text, image_urls
+        return segments
 
-    def _extract_images_from_html_block(self, html_block: str) -> list[str]:
-        urls: list[str] = []
-        seen_keys: set[str] = set()
-        for matched in re.finditer(
-            r"data-original=\"([^\"]+)\"|src=\"([^\"]+)\"", html_block, re.I
-        ):
-            candidate = matched.group(1) or matched.group(2) or ""
-            normalized = self._normalize_image_url(candidate)
-            dedup_key = self._image_dedup_key(normalized)
-            if normalized and dedup_key and dedup_key not in seen_keys:
-                seen_keys.add(dedup_key)
-                urls.append(normalized)
-        return urls
+    def _parse_html_block_segments(self, html_block: str) -> list[tuple[str, str]]:
+        """把 HTML 文本块按内联 <img> 的出现位置拆为有序的文/图段。
+
+        例如 "文字一<img/>文字二" 会拆为
+        [("text", "文字一"), ("image", ...), ("text", "文字二")]。
+        """
+        segments: list[tuple[str, str]] = []
+        for part in re.split(r"(<img\b[^>]*>)", html_block, flags=re.I):
+            if not part:
+                continue
+            if re.fullmatch(r"<img\b[^>]*>", part, flags=re.I):
+                matched = re.search(
+                    r"data-original=\"([^\"]+)\"|src=\"([^\"]+)\"", part, re.I
+                )
+                if matched:
+                    url = self._normalize_image_url(
+                        matched.group(1) or matched.group(2) or ""
+                    )
+                    if url:
+                        segments.append(("image", url))
+            else:
+                text = self._html_block_to_text(part)
+                if text:
+                    segments.append(("text", text))
+        return segments
 
     def _normalize_image_url(self, url: str) -> str:
         if not url:
@@ -934,6 +971,13 @@ class XiaoheiheParser(BaseParser):
             return ""
         if "/bbs/" not in url:
             return ""
+        # 接口给的 url 带七牛 imageMogr2 处理：重压缩并限制在 850x1450 内，大图会糊。
+        # 开启原图模式时去掉查询串，获取平台留存的原始文件。
+        # 同上：None（旧配置未配置该字段）按默认开启处理，仅显式 False 视为关闭。
+        if "imageMogr2" in url and getattr(
+            self.mycfg, "use_original_image", None
+        ) is not False:
+            url = url.split("?", 1)[0]
         return url
 
     def _image_dedup_key(self, url: str) -> str:
@@ -947,7 +991,7 @@ class XiaoheiheParser(BaseParser):
         fragment = html.unescape(html_block)
         fragment = re.sub(r"<br\s*/?>", "\n", fragment, flags=re.I)
         fragment = re.sub(r"</p>\s*<p[^>]*>", "\n", fragment, flags=re.I)
-        fragment = re.sub(r"<img[^>]*>", "", fragment, flags=re.I)
+        fragment = re.sub(r"<img\b[^>]*>", "", fragment, flags=re.I)
         fragment = re.sub(r"<[^>]+>", "", fragment)
         lines = [self._clean_text(line) for line in fragment.splitlines()]
         lines = [line for line in lines if line]

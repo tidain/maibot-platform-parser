@@ -18,6 +18,9 @@
 - twitter
 - youtube
 - zhihu
+- allcpp
+- qzone
+- metube
 - astrbot-port
 
 ## 迁移来源
@@ -35,9 +38,10 @@
 - 原许可：MIT License
 
 ### 改进说明
-- 扩展平台解析支持从 4 个到 17 个
+- 扩展平台解析支持到 20 个
 - 添加管理员命令（开启解析、关闭解析、登录B站）
 - 添加 B站扫码登录功能
+- 添加群聊仅被@才响应、引用消息解析
 - 保留原解析核心，将 AstrBot 消息事件、发送接口和配置读取改为 MaiBot SDK Hook 与 OneBot HTTP 发送
 
 ## 上架备注

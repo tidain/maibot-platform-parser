@@ -16,8 +16,8 @@ class ShipinhaoParser(BaseParser):
     """微信视频号解析器
 
     纯服务端解析思路（无需 MITM / WASM 解密）：
-    1. 把分享短链 (weixin.qq.com/sph/xxx) POST 给腾讯元宝的解析接口，
-       换取带 token + eid 的 playable_url（需登录态 Cookie）；
+    1. 若为分享短链 (weixin.qq.com/sph/xxx)，先预解析跟随 301 重定向获取 finder-preview 长链（失败则回退原始链接），
+       再 POST 给腾讯元宝的解析接口，换取带 token + eid 的 playable_url（需登录态 Cookie）；
     2. 用 token + eid 调 finder-preview 的 get_feed_info 接口，
        拿到明文可播的视频直链 (h264VideoInfo.videoUrl)。
 
@@ -82,6 +82,25 @@ class ShipinhaoParser(BaseParser):
         feed = await self._get_feed_info(export_id, token)
         return self._build_result(feed, share_url)
 
+    async def _resolve_short_url(self, url: str) -> str:
+        """解析微信视频号短链 301 重定向，转为 finder-preview 页面长链以提高元宝解析成功率"""
+        if "weixin.qq.com/sph" not in url:
+            return url
+        try:
+            headers = {
+                "User-Agent": (
+                    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+                    "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.40"
+                )
+            }
+            async with self.session.get(url, headers=headers, allow_redirects=False) as resp:
+                loc = resp.headers.get("Location")
+                if loc:
+                    return loc
+        except Exception:
+            pass
+        return url
+
     # ---------------- Step 1: 元宝换取 token + eid ----------------
 
     async def _parse_share_url(self, share_url: str) -> tuple[str, str]:
@@ -91,7 +110,8 @@ class ShipinhaoParser(BaseParser):
                 "登录 yuanbao.tencent.com 后复制 Cookie 填入插件配置的视频号解析器中。"
             )
 
-        payload = {"type": "video_channel_url", "url": share_url, "scene": 1}
+        target_url = await self._resolve_short_url(share_url)
+        payload = {"type": "video_channel_url", "url": target_url, "scene": 1}
         headers = {**self.yb_headers, "cookie": self.yuanbao_cookie}
 
         async with self.session.post(

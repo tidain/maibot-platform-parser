@@ -96,6 +96,37 @@ async def send_group_forward(
     return False
 
 
+async def get_message(message_id: str, api: ApiSettings) -> list[MessageSegment] | None:
+    """通过 OneBot get_msg 拉取指定消息的原始消息段（用于引用消息解析）。"""
+    url = f"http://{api.host}:{api.port}/get_msg"
+    token = str(getattr(api, "token", "") or "").strip()
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json={"message_id": message_id}, headers=headers, timeout=30) as response:
+                if response.status != 200:
+                    logger.error("get_msg failed: HTTP %s", response.status)
+                    return None
+                body = await response.json()
+    except Exception as exc:
+        logger.error("get_msg request error: %s", exc)
+        return None
+
+    if not isinstance(body, dict) or body.get("retcode") not in (0, None):
+        logger.error("get_msg returned error: %s", body)
+        return None
+    data = body.get("data") if isinstance(body.get("data"), dict) else {}
+    chain = data.get("message")
+    if isinstance(chain, list):
+        return chain
+    raw = data.get("raw_message")
+    if raw:
+        return [{"type": "text", "data": {"text": str(raw)}}]
+    return None
+
+
 def text_segment(text: str) -> MessageSegment:
     return {"type": "text", "data": {"text": text}}
 

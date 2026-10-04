@@ -24,6 +24,9 @@ class BilibiliLogin:
         """存储哔哩哔哩登录凭证"""
         if self._credential is None:
             return
+        if not self._credential.has_sessdata():
+            logger.warning("哔哩哔哩凭证缺少 SESSDATA, 跳过保存")
+            return
 
         self.credential_file.write_text(
             json.dumps(self._credential.get_cookies(), ensure_ascii=False)
@@ -34,9 +37,16 @@ class BilibiliLogin:
         if not self.credential_file.exists():
             return
 
-        self._credential = Credential.from_cookies(
-            json.loads(self.credential_file.read_text())
-        )
+        cookies = json.loads(self.credential_file.read_text())
+        if "SESSDATA" not in cookies and "sessdata" in cookies:
+            cookies["SESSDATA"] = cookies["sessdata"]
+        if "DedeUserID" not in cookies and "dedeuserid" in cookies:
+            cookies["DedeUserID"] = cookies["dedeuserid"]
+        credential = Credential.from_cookies(cookies)
+        if credential.has_sessdata():
+            self._credential = credential
+        else:
+            logger.warning(f"哔哩哔哩凭证文件缺少 SESSDATA: {self.credential_file}")
 
     async def login_with_qrcode(self) -> bytes:
         """通过二维码登录获取哔哩哔哩登录凭证"""
@@ -99,6 +109,12 @@ class BilibiliLogin:
         if self._credential is None:
             await self._init_credential()
             return self._credential
+
+        if not self._credential.has_sessdata():
+            self._load_credential()
+            if self._credential is None or not self._credential.has_sessdata():
+                logger.warning("哔哩哔哩凭证缺少 SESSDATA, 请重新登录")
+                return None
 
         if not await self._credential.check_valid():
             logger.warning("哔哩哔哩凭证已过期, 请重新配置")

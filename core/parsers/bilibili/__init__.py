@@ -8,7 +8,8 @@ from bilibili_api.video import Video, VideoCodecs, VideoQuality
 from msgspec import convert
 
 import logging
-logger = logging.getLogger(__name__)
+
+logger = logging.getLogger("plugin.multi_platform_parser.core")
 
 from ...config import PluginConfig
 from ...data import ImageContent, MediaContent, Platform
@@ -21,11 +22,13 @@ from ..base import (
 )
 from .login import BilibiliLogin
 
-# 选择客户端
-select_client("curl_cffi")
-# 模拟浏览器，第二参数数值参考 curl_cffi 文档
-# https://curl-cffi.readthedocs.io/en/latest/impersonate.html
-request_settings.set("impersonate", "chrome131")
+try:
+    select_client("curl_cffi")
+    request_settings.set("impersonate", "chrome131")
+except Exception as e:
+    raise ModuleNotFoundError(
+        f"curl_cffi is required by bilibili parser but not installed: {e}"
+    ) from e
 
 
 class BilibiliParser(BaseParser):
@@ -45,10 +48,9 @@ class BilibiliParser(BaseParser):
         self.video_quality = getattr(
             VideoQuality, str(self.mycfg.video_quality).upper(), VideoQuality._720P
         )
-        self.video_codecs = getattr(
-            VideoCodecs, str(self.mycfg.video_codecs).upper(), VideoCodecs.AVC
-        )
-
+        self.video_codecs = [
+            getattr(VideoCodecs, str(self.mycfg.video_codecs).upper(), VideoCodecs.AVC)
+        ]
         self.login = BilibiliLogin(config)
 
     @handle("b23.tv", r"b23\.tv/[A-Za-z\d\._?%&+\-=/#]+")
@@ -154,14 +156,16 @@ class BilibiliParser(BaseParser):
         # 处理分 p
         page_info = video_info.extract_info_with_page(page_num)
 
-        # 获取 AI 总结
+        # 获取 AI 总结（默认提示）
+        ai_summary = ""
         if self.login._credential:
-            cid = await video.get_cid(page_info.index)
-            ai_conclusion = await video.get_ai_conclusion(cid)
-            ai_conclusion = convert(ai_conclusion, AIConclusion)
-            ai_summary = ai_conclusion.summary
-        else:
-            ai_summary: str = "哔哩哔哩 cookie 未配置或失效, 无法使用 AI 总结"
+            try:
+                cid = await video.get_cid(page_info.index)
+                ai_conclusion = await video.get_ai_conclusion(cid)
+                ai_conclusion = convert(ai_conclusion, AIConclusion)
+                ai_summary = ai_conclusion.summary
+            except Exception:
+                ai_summary = "哔哩哔哩 cookie 未配置或失效, 无法使用 AI 总结"
 
         url = f"https://bilibili.com/{video_info.bvid}"
         url += f"?p={page_info.index + 1}" if page_info.index > 0 else ""
@@ -404,6 +408,7 @@ class BilibiliParser(BaseParser):
 
         from bilibili_api.video import (
             AudioStreamDownloadURL,
+            MP4StreamDownloadURL,
             VideoDownloadURLDataDetecter,
             VideoStreamDownloadURL,
         )
@@ -413,25 +418,32 @@ class BilibiliParser(BaseParser):
 
         # 获取下载数据
         download_url_data = await video.get_download_url(page_index=page_index)
+        # Normalize hvc1 streams so bilibili-api can recognize them as HEV.
+        for video_data in download_url_data.get("dash", {}).get("video", []):
+            codecs = video_data.get("codecs", "")
+            if isinstance(codecs, str) and codecs.startswith("hvc1"):
+                video_data["codecs"] = f"hev,{codecs}"
         detecter = VideoDownloadURLDataDetecter(download_url_data)
         streams = detecter.detect_best_streams(
             video_max_quality=self.video_quality,
-            codecs=[self.video_codecs],
+            codecs=self.video_codecs,
             no_dolby_video=True,
             no_hdr=True,
         )
+        dash_data = download_url_data.get("dash") or {}
+        if not streams:
+            raise DownloadException("未找到可下载的视频流（可能是所选编码无对应流）")
         video_stream = streams[0]
+        if isinstance(video_stream, MP4StreamDownloadURL):
+            return video_stream.url, None
         if not isinstance(video_stream, VideoStreamDownloadURL):
             raise DownloadException("未找到可下载的视频流")
         logger.debug(
             f"视频流质量: {video_stream.video_quality.name}, 编码: {video_stream.video_codecs}"
         )
 
-        audio_stream = streams[1]
+        audio_stream = streams[1] if len(streams) > 1 else None
         if not isinstance(audio_stream, AudioStreamDownloadURL):
             return video_stream.url, None
         logger.debug(f"音频流质量: {audio_stream.audio_quality.name}")
         return video_stream.url, audio_stream.url
-
-
-

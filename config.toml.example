@@ -1,7 +1,7 @@
 [plugin]
 name = "multi_platform_parser"
-config_version = "1.7.3"
-version = "1.7.3"
+config_version = "1.7.4"
+version = "1.7.4"
 enabled = true
 admin_qqs = []
 
@@ -23,6 +23,9 @@ enable_weibo = true
 enable_youtube = true
 enable_zhihu = true
 enable_pixiv = false
+enable_allcpp = true        # 启用CPP无差别同人站解析
+enable_metube = false       # 启用Metube解析（需在[more]中开启 metube_confirm 才会实际生效）
+enable_qzone = false        # 启用QQ空间解析（需在[more]中开启 qzone_confirm_thirdparty 才会实际生效）
 
 group_whitelist = []
 block_ai_reply = true
@@ -35,12 +38,17 @@ use_forward_for_multi = true
 pixiv_use_forward = true       # Pixiv图片合并转发发送（关闭则合成为PDF）
 source_max_size_mb = 80        # 单个媒体最大下载大小（MB），范围：1-300
 source_max_minutes = 8         # 视频最大时长（分钟），范围：1-60
+require_at_in_group = true     # 群聊中必须@机器人才触发解析
+enable_reply_parse = false     # 开启引用（回复）消息中的链接解析
+metube_url = "http://127.0.0.1:8081"  # 自建 Metube 服务地址
 
 [more]
 pixiv_encrypt_image_group = true      # 群聊Pixiv图片混淆（仅R18/R18G作品，默认开启）
 pixiv_encrypt_image_private = false   # 私聊Pixiv图片混淆（仅R18/R18G作品，默认关闭）
 twitter_confirm_thirdparty = false    # Twitter第三方服务确认（推文链接会转发到xdown.app，开启表示知悉并同意）
 shipinhao_confirm_thirdparty = false  # 微信视频号第三方服务确认（分享链接会转发到腾讯元宝，开启表示知悉并同意）
+qzone_confirm_thirdparty = false      # QQ空间SnowLuma确认（通过SnowLuma获取登录态凭证，开启表示知悉并同意）
+metube_confirm = false                # Metube确认（链接提交到自建Metube服务，开启表示知悉并同意）
 
 [network]
 proxy = ""
@@ -61,6 +69,9 @@ proxy_weibo = false
 proxy_youtube = true
 proxy_zhihu = false
 proxy_pixiv = true
+proxy_allcpp = false
+proxy_metube = false
+proxy_qzone = false
 common_timeout = 30
 download_timeout = 120
 download_retry_times = 1
@@ -83,6 +94,8 @@ weibo = ""
 youtube = ""
 zhihu = ""
 pixiv = ""
+allcpp = ""
+qzone = ""
 
 [api]
 host = "127.0.0.1"
