@@ -20,11 +20,24 @@ import json
 import time
 from typing import Any
 
-import json5
 from aiohttp import ClientError, ClientSession
 import logging
 
 logger = logging.getLogger("plugin.multi_platform_parser.core")
+
+
+def _json5_loads(text: str) -> Any:
+    """懒加载 json5 解析。json5 不可用时返回 None，避免插件启动阶段因缺依赖而整体失败。"""
+    try:
+        import json5  # type: ignore
+
+        return json5.loads(text)
+    except ImportError:
+        logger.warning("json5 未安装，QQ空间 CGI 的宽松 JSON 解析不可用，部分响应可能解析失败")
+        return None
+    except (ValueError, TypeError):
+        return None
+
 
 from .cookie import CookieJar
 
@@ -397,11 +410,9 @@ class QZoneApiClient:
             value = json.loads(stripped)
             return value if isinstance(value, dict) else None
         except (json.JSONDecodeError, TypeError):
-            try:
-                value = json5.loads(stripped)
+            value = _json5_loads(stripped)
+            if value is not None:
                 return value if isinstance(value, dict) else None
-            except (ValueError, TypeError):
-                pass
 
         left = stripped.find("(")
         right = stripped.rfind(")")
@@ -411,11 +422,10 @@ class QZoneApiClient:
                 value = json.loads(inner)
                 return value if isinstance(value, dict) else None
             except (json.JSONDecodeError, TypeError):
-                try:
-                    value = json5.loads(inner)
+                value = _json5_loads(inner)
+                if value is not None:
                     return value if isinstance(value, dict) else None
-                except (ValueError, TypeError):
-                    return None
+                return None
         return None
 
     @staticmethod
